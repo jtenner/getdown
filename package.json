@@ -36,7 +36,10 @@
   "private": true,
   "scripts": {
     "test": "bun test",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "perf:baseline": "bun run perf/baseline.tsx",
+    "perf:baseline:json": "bun run perf/baseline.tsx --json",
+    "perf:baseline:save": "bun run perf/baseline.tsx --save"
   },
   "type": "module",
   "types": "src/index.tsx"
