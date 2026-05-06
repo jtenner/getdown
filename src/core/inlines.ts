@@ -1,5 +1,12 @@
 import type { InlineNode } from "./ast";
 
+export interface LinkReferenceDefinition {
+  readonly href: string;
+  readonly title?: string;
+}
+
+export type LinkReferenceMap = ReadonlyMap<string, LinkReferenceDefinition>;
+
 const escapablePunctuation = new Set(
   Array.from('!"#$%&\'()*+,-./:;<=>?@[\\]^_`{|}~'),
 );
@@ -13,8 +20,8 @@ const namedEntities: Record<string, string> = {
   apos: "'",
 };
 
-export function parseInlines(source: string): readonly InlineNode[] {
-  return parseInlineRange(source, 0, source.length).nodes;
+export function parseInlines(source: string, references?: LinkReferenceMap): readonly InlineNode[] {
+  return parseInlineRange(source, 0, source.length, undefined, references).nodes;
 }
 
 export function hasUnclosedCodeSpan(source: string): boolean {
@@ -36,11 +43,16 @@ export function hasUnclosedCodeSpan(source: string): boolean {
   return openerLength !== null;
 }
 
+export function normalizeReferenceLabel(label: string): string {
+  return label.trim().replace(/[\t\n ]+/g, " ").toLowerCase();
+}
+
 function parseInlineRange(
   source: string,
   start: number,
   end: number,
   stop?: string,
+  references?: LinkReferenceMap,
 ): { nodes: InlineNode[]; index: number; closed: boolean } {
   const nodes: InlineNode[] = [];
   let text = "";
@@ -110,53 +122,92 @@ function parseInlineRange(
         index = codeSpan.index;
         continue;
       }
+      const optimisticCodeSpan = parseOptimisticCodeSpanAt(source, index, end);
+      if (optimisticCodeSpan) {
+        flushText();
+        nodes.push({ kind: "code", value: optimisticCodeSpan.value });
+        index = optimisticCodeSpan.index;
+        continue;
+      }
       const markerLength = countRun(source, index, "`");
       text += source.slice(index, index + markerLength);
       index += markerLength;
       continue;
     }
 
+    if (char === "<") {
+      const htmlBreak = parseHtmlBreakAt(source, index, end);
+      if (htmlBreak) {
+        flushText();
+        nodes.push({ kind: "break" });
+        index = htmlBreak.index;
+        continue;
+      }
+
+      const htmlSpan = parseHtmlSpanAt(source, index, end, references);
+      if (htmlSpan) {
+        flushText();
+        nodes.push(htmlSpan.node);
+        index = htmlSpan.index;
+        continue;
+      }
+
+      const autolink = parseAngleAutolinkAt(source, index, end);
+      if (autolink) {
+        flushText();
+        nodes.push({
+          kind: "link",
+          href: autolink.href,
+          children: [{ kind: "text", value: autolink.label }],
+        });
+        index = autolink.index;
+        continue;
+      }
+    }
+
+    const literalAutolink = parseLiteralAutolinkAt(source, index, end);
+    if (literalAutolink) {
+      flushText();
+      nodes.push({
+        kind: "link",
+        href: literalAutolink.href,
+        children: [{ kind: "text", value: literalAutolink.label }],
+      });
+      index = literalAutolink.index;
+      continue;
+    }
+
+    if (char === "!" && source[index + 1] === "[") {
+      const image = parseInlineImageAt(source, index, end, references);
+      if (image) {
+        flushText();
+        nodes.push({
+          kind: "image",
+          src: image.href,
+          alt: plainText(parseInlines(image.label, references)),
+          title: image.title,
+        });
+        index = image.index;
+        continue;
+      }
+    }
+
     if (char === "[") {
-      const link = parseInlineLinkAt(source, index, end);
+      const link = parseInlineLinkAt(source, index, end, references);
       if (link) {
         flushText();
         nodes.push({
           kind: "link",
           href: link.href,
           title: link.title,
-          children: parseInlines(link.label),
+          children: parseInlines(link.label, references),
         });
         index = link.index;
         continue;
       }
-    }
-
-    if (source.startsWith("~~", index) && canOpenDelimiter(source, index, "~~")) {
-      const parsed = parseInlineRange(source, index + 2, end, "~~");
-      if (parsed.closed && parsed.nodes.length > 0) {
-        flushText();
-        nodes.push({ kind: "delete", children: parsed.nodes });
-        index = parsed.index;
-        continue;
-      }
-    }
-
-    if (source.startsWith("**", index) && canOpenDelimiter(source, index, "**")) {
-      const parsed = parseInlineRange(source, index + 2, end, "**");
-      if (parsed.closed && parsed.nodes.length > 0) {
-        flushText();
-        nodes.push({ kind: "strong", children: parsed.nodes });
-        index = parsed.index;
-        continue;
-      }
-    }
-
-    if (source.startsWith("__", index) && canOpenDelimiter(source, index, "__")) {
-      const parsed = parseInlineRange(source, index + 2, end, "__");
-      if (parsed.closed && parsed.nodes.length > 0) {
-        flushText();
-        nodes.push({ kind: "strong", children: parsed.nodes });
-        index = parsed.index;
+      if (findClosingBracket(source, index, end) === -1) {
+        text += `${source.slice(index, end)}]`;
+        index = end;
         continue;
       }
     }
@@ -166,9 +217,67 @@ function parseInlineRange(
       return { nodes, index: index + stop.length, closed: true };
     }
 
+    if (source.startsWith("~~", index) && canOpenDelimiter(source, index, "~~")) {
+      const parsed = parseInlineRange(source, index + 2, end, "~~", references);
+      if ((parsed.closed || canOptimisticallyClose(parsed, source, index, "~~")) && parsed.nodes.length > 0) {
+        flushText();
+        nodes.push({ kind: "delete", children: parsed.nodes });
+        index = parsed.index;
+        continue;
+      }
+    }
+
+    if (source.startsWith("***", index) && canOpenDelimiter(source, index, "***")) {
+      const parsed = parseInlineRange(source, index + 3, end, "***", references);
+      if ((parsed.closed || canOptimisticallyClose(parsed, source, index, "***")) && parsed.nodes.length > 0) {
+        flushText();
+        nodes.push({ kind: "strong", children: [{ kind: "emphasis", children: parsed.nodes }] });
+        index = parsed.index;
+        continue;
+      }
+    }
+
+    if (source.startsWith("___", index) && canOpenDelimiter(source, index, "___")) {
+      const parsed = parseInlineRange(source, index + 3, end, "___", references);
+      if ((parsed.closed || canOptimisticallyClose(parsed, source, index, "___")) && parsed.nodes.length > 0) {
+        flushText();
+        nodes.push({ kind: "strong", children: [{ kind: "emphasis", children: parsed.nodes }] });
+        index = parsed.index;
+        continue;
+      }
+    }
+
+    if (source.startsWith("**", index) && canOpenDelimiter(source, index, "**")) {
+      const parsed = parseInlineRange(source, index + 2, end, "**", references);
+      if ((parsed.closed || canOptimisticallyClose(parsed, source, index, "**")) && parsed.nodes.length > 0) {
+        flushText();
+        nodes.push({ kind: "strong", children: parsed.nodes });
+        index = parsed.index;
+        continue;
+      }
+    }
+
+    if (source.startsWith("__", index) && canOpenDelimiter(source, index, "__")) {
+      const parsed = parseInlineRange(source, index + 2, end, "__", references);
+      if ((parsed.closed || canOptimisticallyClose(parsed, source, index, "__")) && parsed.nodes.length > 0) {
+        flushText();
+        nodes.push({ kind: "strong", children: parsed.nodes });
+        index = parsed.index;
+        continue;
+      }
+    }
+
     if ((char === "*" || char === "_") && canOpenDelimiter(source, index, char)) {
-      const parsed = parseInlineRange(source, index + 1, end, char);
-      if (parsed.closed && parsed.nodes.length > 0) {
+      const optimisticWord = parseOptimisticFirstWordEmphasis(source, index, end, char, stop);
+      if (optimisticWord) {
+        flushText();
+        nodes.push({ kind: "emphasis", children: [{ kind: "text", value: optimisticWord.value }] });
+        index = optimisticWord.index;
+        continue;
+      }
+
+      const parsed = parseInlineRange(source, index + 1, end, char, references);
+      if ((parsed.closed || canOptimisticallyClose(parsed, source, index, char)) && parsed.nodes.length > 0) {
         flushText();
         nodes.push({ kind: "emphasis", children: parsed.nodes });
         index = parsed.index;
@@ -184,23 +293,165 @@ function parseInlineRange(
   return { nodes, index, closed: false };
 }
 
+function parseHtmlBreakAt(source: string, index: number, end: number): { index: number } | null {
+  const match = /^<br\s*\/?\s*>/i.exec(source.slice(index, end));
+  return match ? { index: index + match[0].length } : null;
+}
+
+function parseHtmlSpanAt(
+  source: string,
+  index: number,
+  end: number,
+  references?: LinkReferenceMap,
+): { node: InlineNode; index: number } | null {
+  const match = /^<span(?:\s+class="([^"]*)")?>([\s\S]*?)<\/span>/.exec(source.slice(index, end));
+  if (!match) return null;
+  return {
+    node: {
+      kind: "htmlSpan",
+      ...(match[1] !== undefined ? { className: match[1] } : null),
+      children: parseInlines(match[2]!, references),
+    },
+    index: index + match[0].length,
+  };
+}
+
+interface ParsedAutolink {
+  readonly href: string;
+  readonly label: string;
+  readonly index: number;
+}
+
+function parseAngleAutolinkAt(source: string, index: number, end: number): ParsedAutolink | null {
+  const close = source.indexOf(">", index + 1);
+  const labelEnd = close === -1 || close >= end ? end : close;
+
+  const label = source.slice(index + 1, labelEnd);
+  if (/\s/.test(label)) return null;
+  const nextIndex = close === -1 || close >= end ? end : close + 1;
+  if (isUriAutolink(label)) return { href: label, label, index: nextIndex };
+  if (isEmailAutolink(label)) return { href: `mailto:${label}`, label, index: nextIndex };
+  return null;
+}
+
+function parseLiteralAutolinkAt(source: string, index: number, end: number): ParsedAutolink | null {
+  if (!isAutolinkBoundary(source[index - 1])) return null;
+
+  const rest = source.slice(index, end);
+  const urlMatch = /^(https?:\/\/[^\s<]+)/i.exec(rest);
+  if (urlMatch) return literalUrl(urlMatch[0]!, "");
+
+  const wwwMatch = /^(www\.[^\s<]+)/i.exec(rest);
+  if (wwwMatch) return literalUrl(wwwMatch[0]!, "http://");
+
+  const emailMatch = /^[-.!#$%&'*+\/=?^_`{|}~A-Za-z0-9]+@[A-Za-z0-9](?:[A-Za-z0-9-]{0,61}[A-Za-z0-9])?(?:\.[A-Za-z0-9](?:[A-Za-z0-9-]{0,61}[A-Za-z0-9])?)+/.exec(rest);
+  if (emailMatch) {
+    const label = trimTrailingAutolinkPunctuation(emailMatch[0]!);
+    if (label.length === 0) return null;
+    return { href: `mailto:${label}`, label, index: index + label.length };
+  }
+
+  return null;
+
+  function literalUrl(raw: string, hrefPrefix: string): ParsedAutolink | null {
+    const label = trimTrailingAutolinkPunctuation(raw);
+    if (label.length === 0) return null;
+    return { href: `${hrefPrefix}${label}`, label, index: index + label.length };
+  }
+}
+
+function isUriAutolink(value: string): boolean {
+  return /^[A-Za-z][A-Za-z0-9+.-]{1,31}:[^<>]*$/.test(value);
+}
+
+function isEmailAutolink(value: string): boolean {
+  return /^[-.!#$%&'*+\/=?^_`{|}~A-Za-z0-9]+@[A-Za-z0-9](?:[A-Za-z0-9-]{0,61}[A-Za-z0-9])?(?:\.[A-Za-z0-9](?:[A-Za-z0-9-]{0,61}[A-Za-z0-9])?)+$/.test(value);
+}
+
+function isAutolinkBoundary(previous: string | undefined): boolean {
+  return !previous || /[\s([{:]/.test(previous);
+}
+
+function trimTrailingAutolinkPunctuation(value: string): string {
+  let end = value.length;
+  while (end > 0 && /[.!?,:;*_'~]/.test(value[end - 1]!)) end -= 1;
+
+  while (end > 0 && value[end - 1] === ")") {
+    const candidate = value.slice(0, end);
+    const opens = (candidate.match(/\(/g) ?? []).length;
+    const closes = (candidate.match(/\)/g) ?? []).length;
+    if (closes <= opens) break;
+    end -= 1;
+  }
+
+  return value.slice(0, end);
+}
+
+function parseInlineImageAt(
+  source: string,
+  index: number,
+  end: number,
+  references?: LinkReferenceMap,
+): { label: string; href: string; title?: string; index: number } | null {
+  return parseLinkLikeAt(source, index + 1, end, references);
+}
+
 function parseInlineLinkAt(
   source: string,
   index: number,
   end: number,
+  references?: LinkReferenceMap,
 ): { label: string; href: string; title?: string; index: number } | null {
-  const labelEnd = findClosingBracket(source, index, end);
-  if (labelEnd === -1 || source[labelEnd + 1] !== "(") return null;
+  return parseLinkLikeAt(source, index, end, references);
+}
 
-  const destination = parseLinkDestination(source, labelEnd + 2, end);
-  if (!destination) return null;
+function parseLinkLikeAt(
+  source: string,
+  bracketIndex: number,
+  end: number,
+  references?: LinkReferenceMap,
+): { label: string; href: string; title?: string; index: number } | null {
+  const labelEnd = findClosingBracket(source, bracketIndex, end);
+  if (labelEnd === -1) return null;
 
-  return {
-    label: source.slice(index + 1, labelEnd),
-    href: destination.href,
-    title: destination.title,
-    index: destination.index,
-  };
+  const label = source.slice(bracketIndex + 1, labelEnd);
+  if (source[labelEnd + 1] === "(") {
+    const destination = parseLinkDestination(source, labelEnd + 2, end);
+    if (!destination) return null;
+
+    return {
+      label,
+      href: destination.href,
+      title: destination.title,
+      index: destination.index,
+    };
+  }
+
+  const reference = parseReferenceLink(source, labelEnd, end, label, references);
+  if (reference) return reference;
+  return null;
+}
+
+function parseReferenceLink(
+  source: string,
+  labelEnd: number,
+  end: number,
+  label: string,
+  references?: LinkReferenceMap,
+): { label: string; href: string; title?: string; index: number } | null {
+  if (!references) return null;
+
+  if (source[labelEnd + 1] === "[") {
+    const referenceEnd = findClosingBracket(source, labelEnd + 1, end);
+    if (referenceEnd === -1) return null;
+    const rawReference = source.slice(labelEnd + 2, referenceEnd);
+    const normalized = normalizeReferenceLabel(rawReference === "" ? label : rawReference);
+    const definition = references.get(normalized);
+    return definition ? { label, ...definition, index: referenceEnd + 1 } : null;
+  }
+
+  const definition = references.get(normalizeReferenceLabel(label));
+  return definition ? { label, ...definition, index: labelEnd + 1 } : null;
 }
 
 function findClosingBracket(source: string, index: number, end: number): number {
@@ -245,7 +496,8 @@ function parseLinkDestination(
     cursor += 1;
   }
 
-  return null;
+  const parsed = parseLinkBody(source.slice(index, end));
+  return parsed ? { ...parsed, index: end } : null;
 }
 
 function parseLinkBody(body: string): { href: string; title?: string } | null {
@@ -275,7 +527,63 @@ function parseOptionalTitle(raw: string): string | null {
   ) {
     return raw.slice(1, -1);
   }
+  if (raw.startsWith('"') || raw.startsWith("'") || raw.startsWith("(")) return raw.slice(1);
   return null;
+}
+
+function plainText(nodes: readonly InlineNode[]): string {
+  let text = "";
+  for (const node of nodes) {
+    switch (node.kind) {
+      case "text":
+      case "code":
+        text += node.value;
+        break;
+      case "break":
+        text += "\n";
+        break;
+      case "emphasis":
+      case "strong":
+      case "delete":
+      case "link":
+      case "htmlSpan":
+        text += plainText(node.children);
+        break;
+      case "image":
+        text += node.alt;
+        break;
+    }
+  }
+  return text;
+}
+
+function parseOptimisticFirstWordEmphasis(
+  source: string,
+  index: number,
+  end: number,
+  delimiter: string,
+  stop?: string,
+): { value: string; index: number } | null {
+  if (stop || index !== 0) return null;
+  const rest = source.slice(index + delimiter.length, end);
+  if (rest.includes(delimiter) || rest.includes("\n")) return null;
+  const match = /^(\S+) /.exec(rest);
+  if (!match) return null;
+  const remaining = rest.slice(match[1]!.length);
+  if (/[*_~`\[<]/.test(remaining)) return null;
+  return { value: match[1]!, index: index + delimiter.length + match[1]!.length };
+}
+
+function canOptimisticallyClose(
+  parsed: { index: number; closed: boolean },
+  source: string,
+  openerIndex: number,
+  delimiter: string,
+): boolean {
+  if (parsed.closed) return false;
+  const raw = source.slice(openerIndex + delimiter.length, parsed.index);
+  if (delimiter.length === 1 && openerIndex === 0 && !/\s/.test(raw) && raw.length > 4) return false;
+  return true;
 }
 
 function parseCodeSpanAt(source: string, index: number, end: number): { value: string; index: number } | null {
@@ -299,6 +607,13 @@ function parseCodeSpanAt(source: string, index: number, end: number): { value: s
   return null;
 }
 
+function parseOptimisticCodeSpanAt(source: string, index: number, end: number): { value: string; index: number } | null {
+  const openerLength = countRun(source, index, "`");
+  const raw = source.slice(index + openerLength, end);
+  if (raw.length === 0 || raw.includes("`")) return null;
+  return { value: normalizeCodeSpan(raw), index: end };
+}
+
 function countRun(source: string, index: number, marker: string): number {
   let length = 0;
   while (source[index + length] === marker) length += 1;
@@ -317,6 +632,7 @@ function normalizeCodeSpan(raw: string): string {
 function canOpenDelimiter(source: string, index: number, delimiter: string): boolean {
   const next = source[index + delimiter.length];
   if (!next || /\s/.test(next)) return false;
+  if (delimiter === "*" && next === "-") return false;
 
   if (delimiter[0] === "_") {
     const previous = source[index - 1];

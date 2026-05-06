@@ -7,7 +7,11 @@ export type MarkdownBlockNode =
   | ParagraphBlock
   | HeadingBlock
   | ThematicBreakBlock
-  | CodeBlock;
+  | CodeBlock
+  | TableBlock
+  | ListBlock
+  | BlockQuoteBlock
+  | HtmlBlock;
 
 interface BaseBlock {
   readonly id: string;
@@ -37,9 +41,60 @@ export interface ThematicBreakBlock extends Omit<BaseBlock, "kind"> {
 export interface CodeBlock extends Omit<BaseBlock, "kind"> {
   readonly kind: "code";
   readonly text: string;
+  readonly language?: string;
 }
 
-export type InlineNode = TextNode | BreakNode | EmphasisNode | StrongNode | DeleteNode | CodeSpanNode | LinkNode;
+export interface TableBlock extends Omit<BaseBlock, "kind"> {
+  readonly kind: "table";
+  readonly alignments: readonly TableAlignment[];
+  readonly header: readonly TableCell[];
+  readonly rows: readonly (readonly TableCell[])[];
+}
+
+export type TableAlignment = "left" | "center" | "right" | null;
+
+export interface TableCell {
+  readonly text: string;
+  readonly children: readonly InlineNode[];
+}
+
+export interface ListBlock extends Omit<BaseBlock, "kind"> {
+  readonly kind: "list";
+  readonly ordered: boolean;
+  readonly marker: string;
+  readonly startNumber?: number;
+  readonly items: readonly ListItem[];
+}
+
+export interface ListItem {
+  readonly text: string;
+  readonly children: readonly InlineNode[];
+  readonly task?: "checked" | "unchecked";
+  readonly blocks?: readonly MarkdownBlockNode[];
+}
+
+export interface BlockQuoteBlock extends Omit<BaseBlock, "kind"> {
+  readonly kind: "blockquote";
+  readonly blocks: readonly MarkdownBlockNode[];
+}
+
+export interface HtmlBlock extends Omit<BaseBlock, "kind"> {
+  readonly kind: "html";
+  readonly tag: "div" | "hr";
+  readonly innerHtml: string;
+  readonly trailingNewline?: boolean;
+}
+
+export type InlineNode =
+  | TextNode
+  | BreakNode
+  | EmphasisNode
+  | StrongNode
+  | DeleteNode
+  | CodeSpanNode
+  | LinkNode
+  | ImageNode
+  | HtmlSpanNode;
 
 export interface TextNode {
   readonly kind: "text";
@@ -74,5 +129,18 @@ export interface LinkNode {
   readonly kind: "link";
   readonly href: string;
   readonly title?: string;
+  readonly children: readonly InlineNode[];
+}
+
+export interface ImageNode {
+  readonly kind: "image";
+  readonly src: string;
+  readonly alt: string;
+  readonly title?: string;
+}
+
+export interface HtmlSpanNode {
+  readonly kind: "htmlSpan";
+  readonly className?: string;
   readonly children: readonly InlineNode[];
 }
