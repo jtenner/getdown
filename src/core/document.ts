@@ -212,7 +212,8 @@ function parseBlockQuote(
   const raw = sourceSlice(lines, startLine, nextLine);
   const reusable = consumeReusableBlock<BlockQuoteBlock>("blockquote", lines[startLine]!.start, raw, reuse);
   if (reusable) return { block: reusable, nextLine };
-  const childDocument = parseDocument(parts.join("\n"));
+  const childContent = parts.join("\n").trim() === "" ? "" : parts.join("\n");
+  const childDocument = parseDocument(childContent);
   const block: BlockQuoteBlock = {
     id: blockId("blockquote", lines[startLine]!.start, raw),
     kind: "blockquote",

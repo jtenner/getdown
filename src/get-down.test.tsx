@@ -2258,6 +2258,7 @@ const enabledRenderingCases = new Set([
   "emphasis: four underscores is literal",
   // Edge cases: code spans
   "code spans: code span containing backtick via double backticks",
+  "code spans: code span with leading and trailing spaces only",
   "code spans: triple backtick code span with double-backtick content",
   // Edge cases: links
   "links: reference link with internal whitespace in definition label",
@@ -2280,6 +2281,7 @@ const enabledRenderingCases = new Set([
   "tables: table row with fewer cells is padded",
   // Edge cases: block quotes
   "block quotes: block quote containing fenced code and list",
+  "block quotes: block quote with only blank lines after marker",
   "block quotes: triple nested block quote",
   // Edge cases: code blocks
   "code blocks: tilde fenced code block with info string",
@@ -2300,6 +2302,8 @@ const enabledRenderingCases = new Set([
   "optimistic closing: unterminated strikethrough containing code span auto-closes",
   "optimistic closing: unterminated emphasis inside unterminated link auto-closes both",
   "optimistic closing: unterminated angle bracket autolink consumes rest of paragraph",
+  "optimistic closing: unterminated emphasis after backslash escape stays literal",
+  "optimistic closing: unterminated code span with only backticks is literal backticks",
   "optimistic closing: unterminated emphasis with entity reference auto-closes",
 ]);
 

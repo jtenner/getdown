@@ -271,6 +271,20 @@ function parseInlineRange(
     }
 
     if ((char === "*" || char === "_") && canOpenDelimiter(source, index, char)) {
+      if (!stop) {
+        const trailingBackslashIndex = source[end - 1] === "\\" ? end - 1 : source[end - 1] === "\n" && source[end - 2] === "\\" ? end - 2 : -1;
+        if (trailingBackslashIndex !== -1) {
+          const parsedBeforeTrailingBackslash = parseInlineRange(source, index + 1, trailingBackslashIndex, char, references);
+          if (!parsedBeforeTrailingBackslash.closed && parsedBeforeTrailingBackslash.nodes.length > 0) {
+            flushText();
+            nodes.push({ kind: "emphasis", children: parsedBeforeTrailingBackslash.nodes });
+            text += "\\";
+            index = trailingBackslashIndex === end - 2 ? end : end - 1;
+            continue;
+          }
+        }
+      }
+
       const optimisticWord = parseOptimisticFirstWordEmphasis(source, index, end, char, stop);
       if (optimisticWord) {
         flushText();
@@ -656,7 +670,7 @@ function parseCodeSpanAt(source: string, index: number, end: number): { value: s
 function parseOptimisticCodeSpanAt(source: string, index: number, end: number): { value: string; index: number } | null {
   const openerLength = countRun(source, index, "`");
   const raw = source.slice(index + openerLength, end);
-  if (raw.length === 0 || raw.includes("`")) return null;
+  if (raw.length === 0 || raw.includes("`") || /^ *$/.test(raw)) return null;
   return { value: normalizeCodeSpan(raw), index: end };
 }
 
