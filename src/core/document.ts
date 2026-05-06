@@ -6,7 +6,7 @@ import type {
   ParsedDocument,
   ThematicBreakBlock,
 } from "./ast";
-import { parseInlines } from "./inlines";
+import { hasUnclosedCodeSpan, parseInlines } from "./inlines";
 
 interface SourceLine {
   readonly text: string;
@@ -142,7 +142,15 @@ function parseParagraph(
 
   while (nextLine < lines.length) {
     const line = lines[nextLine]!;
-    if (isBlank(line.text)) break;
+    if (isBlank(line.text)) {
+      if (parts.length > 0 && hasUnclosedCodeSpan(parts.join("\n"))) {
+        parts.push("");
+        end = line.end;
+        nextLine += 1;
+        continue;
+      }
+      break;
+    }
     if (
       nextLine > startLine &&
       ((nextLine === startLine + 1 && parseSetextDelimiter(line.text)) ||

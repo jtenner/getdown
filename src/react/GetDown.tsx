@@ -59,5 +59,15 @@ function renderInline(node: InlineNode, key: number): ReactNode {
       return <em key={key}>{renderInlines(node.children)}</em>;
     case "strong":
       return <strong key={key}>{renderInlines(node.children)}</strong>;
+    case "delete":
+      return <del key={key}>{renderInlines(node.children)}</del>;
+    case "code":
+      return <code key={key}>{node.value}</code>;
+    case "link":
+      return (
+        <a key={key} href={node.href} title={node.title}>
+          {renderInlines(node.children)}
+        </a>
+      );
   }
 }

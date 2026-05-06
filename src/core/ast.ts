@@ -39,7 +39,7 @@ export interface CodeBlock extends Omit<BaseBlock, "kind"> {
   readonly text: string;
 }
 
-export type InlineNode = TextNode | BreakNode | EmphasisNode | StrongNode;
+export type InlineNode = TextNode | BreakNode | EmphasisNode | StrongNode | DeleteNode | CodeSpanNode | LinkNode;
 
 export interface TextNode {
   readonly kind: "text";
@@ -57,5 +57,22 @@ export interface EmphasisNode {
 
 export interface StrongNode {
   readonly kind: "strong";
+  readonly children: readonly InlineNode[];
+}
+
+export interface DeleteNode {
+  readonly kind: "delete";
+  readonly children: readonly InlineNode[];
+}
+
+export interface CodeSpanNode {
+  readonly kind: "code";
+  readonly value: string;
+}
+
+export interface LinkNode {
+  readonly kind: "link";
+  readonly href: string;
+  readonly title?: string;
   readonly children: readonly InlineNode[];
 }
