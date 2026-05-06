@@ -165,16 +165,18 @@ function parseInlineRange(
       }
     }
 
-    const literalAutolink = parseLiteralAutolinkAt(source, index, end);
-    if (literalAutolink) {
-      flushText();
-      nodes.push({
-        kind: "link",
-        href: literalAutolink.href,
-        children: [{ kind: "text", value: literalAutolink.label }],
-      });
-      index = literalAutolink.index;
-      continue;
+    if (isPotentialLiteralAutolinkStart(source, index)) {
+      const literalAutolink = parseLiteralAutolinkAt(source, index, end);
+      if (literalAutolink) {
+        flushText();
+        nodes.push({
+          kind: "link",
+          href: literalAutolink.href,
+          children: [{ kind: "text", value: literalAutolink.label }],
+        });
+        index = literalAutolink.index;
+        continue;
+      }
     }
 
     if (char === "!" && source[index + 1] === "[") {
@@ -337,14 +339,19 @@ function parseAngleAutolinkAt(source: string, index: number, end: number): Parse
 function parseLiteralAutolinkAt(source: string, index: number, end: number): ParsedAutolink | null {
   if (!isAutolinkBoundary(source[index - 1])) return null;
 
-  const rest = source.slice(index, end);
-  const urlMatch = /^(https?:\/\/[^\s<]+)/i.exec(rest);
-  if (urlMatch) return literalUrl(urlMatch[0]!, "");
+  if (startsWithIgnoreCase(source, index, "http://") || startsWithIgnoreCase(source, index, "https://")) {
+    return literalUrl(source.slice(index, scanLiteralAutolinkEnd(source, index, end)), "");
+  }
 
-  const wwwMatch = /^(www\.[^\s<]+)/i.exec(rest);
-  if (wwwMatch) return literalUrl(wwwMatch[0]!, "http://");
+  if (startsWithIgnoreCase(source, index, "www.")) {
+    return literalUrl(source.slice(index, scanLiteralAutolinkEnd(source, index, end)), "http://");
+  }
 
-  const emailMatch = /^[-.!#$%&'*+\/=?^_`{|}~A-Za-z0-9]+@[A-Za-z0-9](?:[A-Za-z0-9-]{0,61}[A-Za-z0-9])?(?:\.[A-Za-z0-9](?:[A-Za-z0-9-]{0,61}[A-Za-z0-9])?)+/.exec(rest);
+  const candidateEnd = scanLiteralAutolinkEnd(source, index, end);
+  const at = source.indexOf("@", index + 1);
+  if (at === -1 || at >= candidateEnd) return null;
+
+  const emailMatch = /^[-.!#$%&'*+\/=?^_`{|}~A-Za-z0-9]+@[A-Za-z0-9](?:[A-Za-z0-9-]{0,61}[A-Za-z0-9])?(?:\.[A-Za-z0-9](?:[A-Za-z0-9-]{0,61}[A-Za-z0-9])?)+/.exec(source.slice(index, candidateEnd));
   if (emailMatch) {
     const label = trimTrailingAutolinkPunctuation(emailMatch[0]!);
     if (label.length === 0) return null;
@@ -369,22 +376,55 @@ function isEmailAutolink(value: string): boolean {
 }
 
 function isAutolinkBoundary(previous: string | undefined): boolean {
-  return !previous || /[\s([{:]/.test(previous);
+  return !previous || previous === " " || previous === "\n" || previous === "\t" || previous === "\r" || previous === "\f" || previous === "\v" || previous === "(" || previous === "[" || previous === "{" || previous === ":";
+}
+
+function isPotentialLiteralAutolinkStart(source: string, index: number): boolean {
+  const char = source[index];
+  return isAutolinkBoundary(source[index - 1]) && !!char && (startsWithIgnoreCase(source, index, "http://") || startsWithIgnoreCase(source, index, "https://") || startsWithIgnoreCase(source, index, "www.") || isEmailLocalChar(char));
+}
+
+function startsWithIgnoreCase(source: string, index: number, prefix: string): boolean {
+  if (index + prefix.length > source.length) return false;
+  for (let offset = 0; offset < prefix.length; offset += 1) {
+    const code = source.charCodeAt(index + offset);
+    const lower = code >= 65 && code <= 90 ? code + 32 : code;
+    if (lower !== prefix.charCodeAt(offset)) return false;
+  }
+  return true;
+}
+
+function scanLiteralAutolinkEnd(source: string, index: number, end: number): number {
+  let cursor = index;
+  while (cursor < end) {
+    const char = source[cursor];
+    if (char === "<" || char === " " || char === "\n" || char === "\t") break;
+    cursor += 1;
+  }
+  return cursor;
 }
 
 function trimTrailingAutolinkPunctuation(value: string): string {
   let end = value.length;
-  while (end > 0 && /[.!?,:;*_'~]/.test(value[end - 1]!)) end -= 1;
+  while (end > 0 && isTrailingAutolinkPunctuation(value[end - 1]!)) end -= 1;
 
-  while (end > 0 && value[end - 1] === ")") {
-    const candidate = value.slice(0, end);
-    const opens = (candidate.match(/\(/g) ?? []).length;
-    const closes = (candidate.match(/\)/g) ?? []).length;
-    if (closes <= opens) break;
+  let opens = 0;
+  let closes = 0;
+  for (let index = 0; index < end; index += 1) {
+    if (value[index] === "(") opens += 1;
+    else if (value[index] === ")") closes += 1;
+  }
+
+  while (end > 0 && value[end - 1] === ")" && closes > opens) {
     end -= 1;
+    closes -= 1;
   }
 
   return value.slice(0, end);
+}
+
+function isTrailingAutolinkPunctuation(char: string): boolean {
+  return char === "." || char === "!" || char === "?" || char === "," || char === ":" || char === ";" || char === "*" || char === "_" || char === "'" || char === "~";
 }
 
 function parseInlineImageAt(
@@ -631,7 +671,7 @@ function normalizeCodeSpan(raw: string): string {
 
 function canOpenDelimiter(source: string, index: number, delimiter: string): boolean {
   const next = source[index + delimiter.length];
-  if (!next || /\s/.test(next)) return false;
+  if (!next || isWhitespace(next)) return false;
   if (delimiter === "*" && next === "-") return false;
 
   if (delimiter[0] === "_") {
@@ -644,11 +684,20 @@ function canOpenDelimiter(source: string, index: number, delimiter: string): boo
 
 function canCloseDelimiter(source: string, index: number, delimiter: string): boolean {
   const previous = source[index - 1];
-  return !!previous && !/\s/.test(previous) && source.startsWith(delimiter, index);
+  return !!previous && !isWhitespace(previous) && source.startsWith(delimiter, index);
+}
+
+function isWhitespace(value: string): boolean {
+  return value === " " || value === "\n" || value === "\t" || value === "\r" || value === "\f" || value === "\v";
 }
 
 function isAsciiAlphanumeric(value: string): boolean {
-  return /^[A-Za-z0-9]$/.test(value);
+  const code = value.charCodeAt(0);
+  return (code >= 48 && code <= 57) || (code >= 65 && code <= 90) || (code >= 97 && code <= 122);
+}
+
+function isEmailLocalChar(value: string): boolean {
+  return isAsciiAlphanumeric(value) || value === "-" || value === "." || value === "!" || value === "#" || value === "$" || value === "%" || value === "&" || value === "'" || value === "*" || value === "+" || value === "/" || value === "=" || value === "?" || value === "^" || value === "_" || value === "`" || value === "{" || value === "|" || value === "}" || value === "~";
 }
 
 function decodeEntityAt(source: string, index: number): { value: string; index: number } | null {

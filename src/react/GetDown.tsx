@@ -110,7 +110,9 @@ function renderInlines(nodes: readonly InlineNode[]): ReactNode[] {
 }
 
 function renderInlinesHtml(nodes: readonly InlineNode[]): string {
-  return nodes.map(renderInlineHtml).join("");
+  let html = "";
+  for (const node of nodes) html += renderInlineHtml(node);
+  return html;
 }
 
 function renderInlineHtml(node: InlineNode): string {
@@ -137,11 +139,29 @@ function renderInlineHtml(node: InlineNode): string {
 }
 
 function escapeHtml(value: string): string {
-  return value.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+  let escaped = "";
+  let start = 0;
+  for (let index = 0; index < value.length; index += 1) {
+    const char = value[index];
+    const replacement = char === "&" ? "&amp;" : char === "<" ? "&lt;" : char === ">" ? "&gt;" : null;
+    if (!replacement) continue;
+    escaped += value.slice(start, index) + replacement;
+    start = index + 1;
+  }
+  return start === 0 ? value : escaped + value.slice(start);
 }
 
 function escapeAttribute(value: string): string {
-  return escapeHtml(value).replace(/"/g, "&quot;");
+  let escaped = "";
+  let start = 0;
+  for (let index = 0; index < value.length; index += 1) {
+    const char = value[index];
+    const replacement = char === "&" ? "&amp;" : char === "<" ? "&lt;" : char === ">" ? "&gt;" : char === '"' ? "&quot;" : null;
+    if (!replacement) continue;
+    escaped += value.slice(start, index) + replacement;
+    start = index + 1;
+  }
+  return start === 0 ? value : escaped + value.slice(start);
 }
 
 function renderInline(node: InlineNode, key: number): ReactNode {
