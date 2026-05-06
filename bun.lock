@@ -3,7 +3,7 @@
   "configVersion": 1,
   "workspaces": {
     "": {
-      "name": "get-down",
+      "name": "getdown",
       "devDependencies": {
         "@types/bun": "latest",
         "@types/react": "^19.2.14",

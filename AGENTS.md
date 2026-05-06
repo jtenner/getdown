@@ -4,7 +4,7 @@ Compact guide for coding agents working in this repository.
 
 ## Project overview
 
-`get-down` is a private TypeScript/Bun package that exposes a React component API for rendering GitHub Flavored Markdown.
+`getdown` is a TypeScript/Bun package that exposes a React component API for rendering GitHub Flavored Markdown.
 
 - Package entrypoint: `index.ts`
 - Public exports: `src/index.tsx`
@@ -18,7 +18,7 @@ Compact guide for coding agents working in this repository.
 - `src/core/document.ts` — Block/document parser and structural sharing via `parseDocument(content, previous?)`.
 - `src/core/inlines.ts` — Inline parser helpers, links, emphasis, code spans, entities, autolinks.
 - `src/react/GetDown.tsx` — Public React renderer and HTML escaping/rendering helpers.
-- `src/get-down.test.tsx` — Main GFM rendering test matrix.
+- `src/getdown.test.tsx` — Main GFM rendering test matrix.
 - `src/core/document.test.ts` — Structural sharing tests.
 - `tests/streaming-markdown.test.tsx` — Public component smoke test.
 - `perf/baseline.tsx` — Internal performance/GC baseline harness.
@@ -53,7 +53,7 @@ Useful scripts in `package.json`:
 ## Development expectations
 
 - Keep public API exports in `src/index.tsx` and root `index.ts` aligned.
-- Prefer adding/adjusting rendering cases in `src/get-down.test.tsx` for Markdown behavior changes.
+- Prefer adding/adjusting rendering cases in `src/getdown.test.tsx` for Markdown behavior changes.
 - Add focused parser tests in `src/core/*.test.ts` for structural or parser-internal behavior.
 - After parser/rendering changes, run `bun test` and `bun run typecheck`.
 - For streaming/performance-sensitive changes, run `bun run perf:baseline` and compare against `perf/README.md`.

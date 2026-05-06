@@ -1,11 +1,11 @@
-# get-down
+# getdown
 
 A React component API shell for rendering GitHub Flavored Markdown.
 
 ## API
 
 ```tsx
-import { GetDown } from "get-down";
+import { GetDown } from "getdown";
 
 export function MarkdownView({ markdown }: { markdown: string }) {
   return <GetDown content={markdown} />;

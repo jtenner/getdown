@@ -391,7 +391,7 @@ function percentile(sorted: readonly number[], fraction: number): number {
 }
 
 function printSummary(results: readonly BenchmarkResult[]): void {
-  console.log("get-down internal performance baseline\n");
+  console.log("getdown internal performance baseline\n");
   console.log("Run with `bun run perf:baseline:save` to store JSON under perf/baselines/.\n");
 
   const rows = results.map((result) => [

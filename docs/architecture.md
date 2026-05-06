@@ -6,7 +6,7 @@ The public API is:
 <GetDown content={markdown} />
 ```
 
-Internally, get-down is split into a pure parser core and a thin React renderer:
+Internally, getdown is split into a pure parser core and a thin React renderer:
 
 ```txt
 src/
@@ -34,5 +34,5 @@ paragraph DOM element. Earlier blocks keep stable ids, stable object references,
 and skip React render work.
 
 New syntax should be added test-first by enabling a small set of fixture cases in
-`src/get-down.test.tsx`, implementing the smallest parser/rendering slice, and
+`src/getdown.test.tsx`, implementing the smallest parser/rendering slice, and
 then expanding the enabled set.

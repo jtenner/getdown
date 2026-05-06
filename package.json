@@ -1,5 +1,5 @@
 {
-  "name": "get-down",
+  "name": "getdown",
   "version": "0.0.0",
   "module": "index.ts",
   "devDependencies": {
@@ -33,7 +33,7 @@
     "react",
     "typescript"
   ],
-  "private": true,
+  "private": false,
   "scripts": {
     "test": "bun test",
     "typecheck": "tsc --noEmit",
