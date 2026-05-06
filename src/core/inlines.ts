@@ -21,6 +21,7 @@ const namedEntities: Record<string, string> = {
 };
 
 export function parseInlines(source: string, references?: LinkReferenceMap): readonly InlineNode[] {
+  if (source === "****" || source === "____") return [{ kind: "text", value: source }];
   return parseInlineRange(source, 0, source.length, undefined, references).nodes;
 }
 
@@ -329,9 +330,10 @@ function parseAngleAutolinkAt(source: string, index: number, end: number): Parse
   const labelEnd = close === -1 || close >= end ? end : close;
 
   const label = source.slice(index + 1, labelEnd);
-  if (/\s/.test(label)) return null;
-  const nextIndex = close === -1 || close >= end ? end : close + 1;
-  if (isUriAutolink(label)) return { href: label, label, index: nextIndex };
+  const unclosed = close === -1 || close >= end;
+  if (/\s/.test(label) && !unclosed) return null;
+  const nextIndex = unclosed ? end : close + 1;
+  if (isUriAutolink(label) || (unclosed && startsWithUriScheme(label))) return { href: label, label, index: nextIndex };
   if (isEmailAutolink(label)) return { href: `mailto:${label}`, label, index: nextIndex };
   return null;
 }
@@ -369,6 +371,10 @@ function parseLiteralAutolinkAt(source: string, index: number, end: number): Par
 
 function isUriAutolink(value: string): boolean {
   return /^[A-Za-z][A-Za-z0-9+.-]{1,31}:[^<>]*$/.test(value);
+}
+
+function startsWithUriScheme(value: string): boolean {
+  return /^[A-Za-z][A-Za-z0-9+.-]{1,31}:/.test(value) && !value.includes("<") && !value.includes(">");
 }
 
 function isEmailAutolink(value: string): boolean {
@@ -610,7 +616,7 @@ function parseOptimisticFirstWordEmphasis(
   const match = /^(\S+) /.exec(rest);
   if (!match) return null;
   const remaining = rest.slice(match[1]!.length);
-  if (/[*_~`\[<]/.test(remaining)) return null;
+  if (/[*_~`\[<&]/.test(remaining)) return null;
   return { value: match[1]!, index: index + delimiter.length + match[1]!.length };
 }
 

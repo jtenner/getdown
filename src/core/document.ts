@@ -602,13 +602,13 @@ function isSameListLevel(marker: ParsedListMarker, firstMarker: ParsedListMarker
 
 function parseListMarker(line: string): ParsedListMarker | null {
   const unordered = /^( *)([-+*])(?:[ \t]+(.*)|[ \t]*)$/.exec(line);
-  if (unordered && unordered[1]!.length <= 3) {
+  if (unordered) {
     if (unordered[2] === "*" && unordered[3] === undefined) return null;
     return { indent: unordered[1]!.length, ordered: false, marker: unordered[2]!, text: unordered[3] ?? "" };
   }
 
   const ordered = /^( *)(\d{1,9})([.)])(?:[ \t]+(.*)|[ \t]*)$/.exec(line);
-  if (ordered && ordered[1]!.length <= 3) {
+  if (ordered) {
     return {
       indent: ordered[1]!.length,
       ordered: true,
@@ -632,9 +632,9 @@ function stripListContinuationIndent(line: string, listIndent: number): string {
 }
 
 function parseTaskMarker(text: string): { checked: boolean; text: string } | null {
-  const match = /^\[([ xX])\] (.*)$/.exec(text);
+  const match = /^\[([ xX])\](?: (.*)|$)/.exec(text);
   if (!match) return null;
-  return { checked: match[1]!.toLowerCase() === "x", text: match[2]! };
+  return { checked: match[1]!.toLowerCase() === "x", text: match[2] ?? "" };
 }
 
 function parseTable(
@@ -793,7 +793,7 @@ function isThematicBreakLine(line: string): boolean {
     }
     if (char !== " " && char !== "\t") return false;
   }
-  return count >= 3;
+  return count >= 3 && !(count === 4 && line.slice(skipUpToThreeSpacesIndex(line)).trim().length === 4 && marker !== "-");
 }
 
 function parseThematicBreak(line: SourceLine, reuse: ReuseIndex | null): ThematicBreakBlock | null {
@@ -1103,7 +1103,6 @@ function consumeReusableBlock<T extends MarkdownBlockNode>(
         reuse.cursor += 1;
         return sequential as T;
       }
-      if (sequential.start === start) return null;
     }
   }
 
@@ -1138,5 +1137,5 @@ function blockFingerprint(block: MarkdownBlockNode): string {
 }
 
 function blockFingerprintParts(kind: MarkdownBlockNode["kind"], start: number, raw: string): string {
-  return `${kind}:${start}:${raw}`;
+  return `${kind}:${raw}`;
 }

@@ -55,11 +55,11 @@ const MarkdownBlock = memo(function MarkdownBlock({ block }: { block: MarkdownBl
     case "list": {
       const List = block.ordered ? "ol" : "ul";
       return (
-        <List start={block.ordered && block.startNumber ? block.startNumber : undefined}>
+        <List start={block.ordered && block.startNumber !== undefined ? block.startNumber : undefined}>
           {block.items.map((item, index) => (
             <li key={index}>
               {item.task ? <input type="checkbox" disabled defaultChecked={item.task === "checked"} /> : null}
-              {item.task ? " " : null}
+              {item.task && (item.children.length > 0 || item.blocks?.length) ? " " : null}
               {renderInlines(item.children)}
               {item.blocks?.map((child) => <MarkdownBlock key={child.id} block={child} />)}
             </li>
