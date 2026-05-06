@@ -1,12 +1,4 @@
-import type { ReactElement } from "react";
-
-export interface GetDownProps {
-  /** GitHub Flavored Markdown source to render. */
-  content: string;
-}
-
-/** Shell for the public get-down API. */
-export function GetDown({ content }: GetDownProps): ReactElement | null {
-  void content;
-  return null;
-}
+export type { GetDownProps } from "./react/GetDown";
+export { GetDown } from "./react/GetDown";
+export type { InlineNode, MarkdownBlockNode, ParsedDocument } from "./core/ast";
+export { parseDocument } from "./core/document";

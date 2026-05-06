@@ -6,6 +6,6 @@ describe("GetDown", () => {
   test("exposes a single component that accepts markdown content", () => {
     const html = renderToStaticMarkup(<GetDown content="# Hello" />);
 
-    expect(html).toBe("");
+    expect(html).toBe("<h1>Hello</h1>");
   });
 });
