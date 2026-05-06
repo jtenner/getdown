@@ -40,11 +40,6 @@ function parseInlineRange(
   }
 
   while (index < end) {
-    if (stop && source.startsWith(stop, index)) {
-      flushText();
-      return { nodes, index: index + stop.length, closed: true };
-    }
-
     const char = source[index]!;
 
     if (char === "\\") {
@@ -88,7 +83,7 @@ function parseInlineRange(
       continue;
     }
 
-    if (source.startsWith("**", index)) {
+    if (source.startsWith("**", index) && canOpenDelimiter(source, index, "**")) {
       const parsed = parseInlineRange(source, index + 2, end, "**");
       if (parsed.closed && parsed.nodes.length > 0) {
         flushText();
@@ -98,7 +93,7 @@ function parseInlineRange(
       }
     }
 
-    if (source.startsWith("__", index)) {
+    if (source.startsWith("__", index) && canOpenDelimiter(source, index, "__")) {
       const parsed = parseInlineRange(source, index + 2, end, "__");
       if (parsed.closed && parsed.nodes.length > 0) {
         flushText();
@@ -108,7 +103,12 @@ function parseInlineRange(
       }
     }
 
-    if (char === "*" || char === "_") {
+    if (stop && source.startsWith(stop, index) && canCloseDelimiter(source, index, stop)) {
+      flushText();
+      return { nodes, index: index + stop.length, closed: true };
+    }
+
+    if ((char === "*" || char === "_") && canOpenDelimiter(source, index, char)) {
       const parsed = parseInlineRange(source, index + 1, end, char);
       if (parsed.closed && parsed.nodes.length > 0) {
         flushText();
@@ -124,6 +124,27 @@ function parseInlineRange(
 
   flushText();
   return { nodes, index, closed: false };
+}
+
+function canOpenDelimiter(source: string, index: number, delimiter: string): boolean {
+  const next = source[index + delimiter.length];
+  if (!next || /\s/.test(next)) return false;
+
+  if (delimiter[0] === "_") {
+    const previous = source[index - 1];
+    if (previous && isAsciiAlphanumeric(previous) && isAsciiAlphanumeric(next)) return false;
+  }
+
+  return true;
+}
+
+function canCloseDelimiter(source: string, index: number, delimiter: string): boolean {
+  const previous = source[index - 1];
+  return !!previous && !/\s/.test(previous) && source.startsWith(delimiter, index);
+}
+
+function isAsciiAlphanumeric(value: string): boolean {
+  return /^[A-Za-z0-9]$/.test(value);
 }
 
 function decodeEntityAt(source: string, index: number): { value: string; index: number } | null {

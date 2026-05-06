@@ -1691,6 +1691,22 @@ const enabledRenderingCases = new Set([
   "headings: atx heading level three after level one",
   "headings: setext heading preceded by blank line",
   "headings: setext heading with leading spaces in text line",
+  "headings: setext heading not formed when text has multiple lines before delimiter",
+  "emphasis: asterisk emphasis",
+  "emphasis: underscore emphasis",
+  "emphasis: strong emphasis with asterisks",
+  "emphasis: strong emphasis with underscores",
+  "emphasis: nested emphasis inside strong",
+  "emphasis: strong inside emphasis",
+  "emphasis: intraword underscore does not emphasize",
+  "emphasis: intraword asterisk can emphasize",
+  "emphasis: triple asterisk is strong plus emphasis",
+  "emphasis: triple underscore is strong plus emphasis",
+  "emphasis: emphasis cannot cross paragraph boundary",
+  "emphasis: emphasis does not open when separated by spaces from content",
+  "emphasis: underscore in middle of word stays literal",
+  "emphasis: multiple emphases in one paragraph",
+  "emphasis: asterisk opens emphasis even before punctuation",
 ]);
 
 describe("GetDown GFM rendering", () => {
