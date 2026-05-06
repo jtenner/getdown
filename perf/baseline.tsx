@@ -12,6 +12,8 @@ interface BenchmarkCase {
   readonly iterations: number;
   readonly rounds?: number;
   readonly warmup?: number;
+  /** Input size in bytes (for throughput calculation). */
+  readonly inputBytes?: number;
   run(): unknown;
 }
 
@@ -36,6 +38,10 @@ interface BenchmarkResult {
   readonly retainedObjectDeltaPerOp: number;
   readonly currentMemoryDeltaBytesPerOp: number;
   readonly peakMemoryBytes: number;
+  /** Input size in bytes (for throughput calculation). */
+  readonly inputBytes: number;
+  /** Throughput in KB per second (inputBytes / meanNs * 1e6). */
+  readonly throughputKBps: number;
 }
 
 const comprehensiveMarkdown = [
@@ -71,6 +77,19 @@ const finalParagraphDeltas = chunk(
   8,
 );
 const previouslyParsedComprehensive = parseDocument(comprehensiveMarkdown);
+
+// Scale/edge-case fixture generators
+const largeMarkdown100KB = makeStreamingMarkdown(500) + Array.from({ length: 50 }, (_, i) => `\n\n### Deep section ${i}\n\n${makeStreamingMarkdown(10)}`).join("");
+const deeplyNestedMarkdown = Array.from({ length: 20 }, (_, i) => `${Array.from({ length: i + 1 }, () => "> ").join("")}Nested block quote level ${i + 1}\n`).join("") + "\nPlain paragraph.";
+const manySpansMarkdown = Array.from({ length: 200 }, (_, i) => `span ${i}: \`code${i}\` *em${i}* **strong${i}** ~~del${i}~~`).join(" ");
+const longTextMarkdown = "A".repeat(50_000);
+const manyBlankLinesMarkdown = Array.from({ length: 100 }, () => "   \n").join("") + "\nContent after many blanks.\n\nMore content.";
+
+// Streaming edge-case fixtures
+const stablePrefixForMiddleEdit = makeStreamingMarkdown(16) + "\n\n";
+const middleEditDeltas = ["Original middle paragraph with *emphasis*.\n\n", "Modified middle paragraph with **strong** changes.\n\n"];
+const stableSuffixForMiddleEdit = makeStreamingMarkdown(16);
+const singleCharDeltas = chunk(makeStreamingMarkdown(4), 1);
 
 let sink: unknown;
 
@@ -141,6 +160,73 @@ const benchmarks: readonly BenchmarkCase[] = [
     iterations: 300,
     run: () => renderToStaticMarkup(<GetDown content={comprehensiveMarkdown} />),
   },
+  // --- Scale & edge-case benchmarks ---
+  {
+    group: "document",
+    name: "parseDocument:empty",
+    description: "Empty string parse — measures fixed overhead of document parsing.",
+    iterations: 50_000,
+    inputBytes: 0,
+    run: () => parseDocument(""),
+  },
+  {
+    group: "document",
+    name: "parseDocument:many-blank-lines",
+    description: "100 blank lines followed by content — stress-tests blank-line skipping.",
+    iterations: 2_000,
+    run: () => parseDocument(manyBlankLinesMarkdown),
+  },
+  {
+    group: "document",
+    name: "parseDocument:deep-nesting",
+    description: "20 levels of nested block quotes — worst-case recursive block-quote depth.",
+    iterations: 2_000,
+    run: () => parseDocument(deeplyNestedMarkdown),
+  },
+  {
+    group: "document",
+    name: "parseDocument:large-100kb",
+    description: "~100 KB of generated markdown sections — scale/throughput baseline.",
+    iterations: 100,
+    run: () => parseDocument(largeMarkdown100KB),
+  },
+  {
+    group: "inline",
+    name: "parseInlines:long-plain-text",
+    description: "50 KB of plain text (single TextNode) — measures inline scan overhead on unformatted content.",
+    iterations: 3_000,
+    run: () => parseInlines(longTextMarkdown),
+  },
+  {
+    group: "inline",
+    name: "parseInlines:many-spans",
+    description: "200 of each span type in one paragraph — worst-case inline parsing density.",
+    iterations: 500,
+    run: () => parseInlines(manySpansMarkdown),
+  },
+  {
+    group: "streaming",
+    name: "stream:single-char-chunks",
+    description: "Append 1-character deltas (worst-case streaming API usage) to a short doc.",
+    iterations: 5,
+    rounds: 3,
+    run: () => parseStreamingDeltas(singleCharDeltas),
+  },
+  {
+    group: "streaming",
+    name: "stream:middle-edit",
+    description: "Change only a middle block — leading and trailing blocks should be reused.",
+    iterations: 100,
+    rounds: 5,
+    run: () => parseMiddleEdit(),
+  },
+  {
+    group: "react",
+    name: "renderToStaticMarkup:large",
+    description: "Server-render ~100 KB document through React — renders many block components.",
+    iterations: 20,
+    run: () => renderToStaticMarkup(<GetDown content={largeMarkdown100KB} />),
+  },
 ];
 
 const shouldSave = process.argv.includes("--save");
@@ -185,6 +271,9 @@ function runBenchmark(benchmark: BenchmarkCase): BenchmarkResult {
   const sorted = [...samples].sort((left, right) => left - right);
   const meanNs = samples.reduce((total, value) => total + value, 0) / samples.length;
 
+  const inputBytes = benchmark.inputBytes ?? 0;
+  const throughputKBps = meanNs > 0 && inputBytes > 0 ? (inputBytes / (meanNs / 1e9)) / 1024 : 0;
+
   return {
     name: benchmark.name,
     group: benchmark.group,
@@ -206,6 +295,8 @@ function runBenchmark(benchmark: BenchmarkCase): BenchmarkResult {
     retainedObjectDeltaPerOp: (afterGcHeap.objectCount - beforeHeap.objectCount) / ops,
     currentMemoryDeltaBytesPerOp: (afterMemory.current - beforeMemory.current) / ops,
     peakMemoryBytes: afterMemory.peak,
+    inputBytes,
+    throughputKBps,
   };
 }
 
@@ -245,6 +336,24 @@ function parseFinalBlockTrickle(): number {
   }
 
   return reusedLeadingBlocks;
+}
+
+function parseMiddleEdit(): number {
+  let reusedAroundEdit = 0;
+
+  for (let round = 0; round < 5; round += 1) {
+    const contentBefore = stablePrefixForMiddleEdit + middleEditDeltas[0]! + stableSuffixForMiddleEdit;
+    const contentAfter = stablePrefixForMiddleEdit + middleEditDeltas[1]! + stableSuffixForMiddleEdit;
+    const previous = parseDocument(contentBefore);
+    const next = parseDocument(contentAfter, previous);
+
+    // Leading blocks should be reused
+    for (let index = 0; index < Math.min(previous.blocks.length, next.blocks.length); index += 1) {
+      if (previous.blocks[index] === next.blocks[index]) reusedAroundEdit += 1;
+    }
+  }
+
+  return reusedAroundEdit;
 }
 
 function makeStreamingMarkdown(sections: number): string {
@@ -293,6 +402,7 @@ function printSummary(results: readonly BenchmarkResult[]): void {
     formatBytes(result.heapDeltaBytesPerOp),
     formatBytes(result.retainedHeapBytesPerOp),
     result.retainedObjectDeltaPerOp.toFixed(3),
+    result.throughputKBps > 0 ? `${result.throughputKBps.toFixed(0)} KB/s` : "—",
   ]);
 
   printTable([
@@ -303,6 +413,7 @@ function printSummary(results: readonly BenchmarkResult[]): void {
     "heap Δ/op",
     "retained Δ/op",
     "retained obj/op",
+    "throughput",
   ], rows);
 
   console.log("\nNotes:");

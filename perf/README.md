@@ -17,8 +17,14 @@ The harness reports:
 - `mean/op` and `p95/op` timing across repeated rounds.
 - `heap Δ/op`: heap growth before the post-case GC sweep, a proxy for transient allocation pressure.
 - `retained Δ/op` and `retained obj/op`: heap/object growth after `gcAndSweep()`, a proxy for retained memory.
+- `throughput`: input size converted to KB per second for scale benchmarks.
 
-The streaming cases append deltas to a growing string and call `parseDocument(content, previous)` after each delta. That matches the current API and keeps the focus on whether structural sharing avoids re-render churn while new content arrives.
+Benchmark groups:
+
+- **document**: Full `parseDocument` calls exercising individual block types and structural sharing.
+- **inline**: `parseInlines`, `hasUnclosedCodeSpan`, and `normalizeReferenceLabel` micro-benchmarks.
+- **streaming**: Append deltas to a growing string and call `parseDocument(content, previous)` after each delta.
+- **react**: `renderToStaticMarkup(<GetDown ... />)` end-to-end rendering.
 
 ## Current baseline
 

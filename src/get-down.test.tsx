@@ -1666,6 +1666,307 @@ export const gfmRenderingCases: GfmRenderingCase[] = [
     markdown: "*closed* *open",
     html: "<p><em>closed</em> <em>open</em></p>",
   },
+  // --- Edge cases: escaping ---
+  {
+    section: "escaping",
+    name: "multiple consecutive backslashes",
+    markdown: "\\\\alpha",
+    html: "<p>\\alpha</p>",
+  },
+  {
+    section: "escaping",
+    name: "backslash at end of line is hard break",
+    markdown: "alpha\\\nbeta",
+    html: "<p>alpha<br />\nbeta</p>",
+  },
+  {
+    section: "escaping",
+    name: "numeric entity at max code point",
+    markdown: "&#1114111;",
+    html: "<p>\u{10FFFF}</p>",
+  },
+  {
+    section: "escaping",
+    name: "invalid numeric entity renders as replacement character",
+    markdown: "&#1114112;",
+    html: "<p>�</p>",
+  },
+  // --- Edge cases: emphasis ---
+  {
+    section: "emphasis",
+    name: "four asterisks is literal",
+    markdown: "****",
+    html: "<p>****</p>",
+  },
+  {
+    section: "emphasis",
+    name: "asterisk emphasis followed by dash is literal",
+    markdown: "*-not emphasis*",
+    html: "<p>*-not emphasis*</p>",
+  },
+  {
+    section: "emphasis",
+    name: "emphasis right before hard break",
+    markdown: "*em*  \nnext",
+    html: "<p><em>em</em><br />\nnext</p>",
+  },
+  {
+    section: "emphasis",
+    name: "emphasis right before backslash hard break",
+    markdown: "*em*\\\nnext",
+    html: "<p><em>em</em><br />\nnext</p>",
+  },
+  {
+    section: "emphasis",
+    name: "underscore emphasis with punctuation boundary opens",
+    markdown: "_(alpha)_",
+    html: "<p><em>(alpha)</em></p>",
+  },
+  {
+    section: "emphasis",
+    name: "four underscores is literal",
+    markdown: "____",
+    html: "<p>____</p>",
+  },
+  // --- Edge cases: code spans ---
+  {
+    section: "code spans",
+    name: "code span containing backtick via double backticks",
+    markdown: "`` ` ``",
+    html: "<p><code>`</code></p>",
+  },
+  {
+    section: "code spans",
+    name: "code span with leading and trailing spaces only",
+    markdown: "`  `",
+    html: "<p><code></code></p>",
+  },
+  {
+    section: "code spans",
+    name: "triple backtick code span with double-backtick content",
+    markdown: "``` ``inner`` ```",
+    html: "<p><code>``inner``</code></p>",
+  },
+  // --- Edge cases: links ---
+  {
+    section: "links",
+    name: "reference link with internal whitespace in definition label",
+    markdown: "[alpha][  beta  ]\n\n[beta]: https://example.com",
+    html: "<p><a href=\"https://example.com\">alpha</a></p>",
+  },
+  {
+    section: "links",
+    name: "link with empty text and empty destination",
+    markdown: "[]()",
+    html: "<p><a href=\"\"></a></p>",
+  },
+  // --- Edge cases: images ---
+  {
+    section: "images",
+    name: "image with reference and title",
+    markdown: "![alt][img]\n\n[img]: https://example.com/pic.png \"title\"",
+    html: "<p><img src=\"https://example.com/pic.png\" alt=\"alt\" title=\"title\" /></p>",
+  },
+  // --- Edge cases: autolinks ---
+  {
+    section: "autolinks",
+    name: "www autolink trailing slash is included",
+    markdown: "Visit www.example.com/ now.",
+    html: "<p>Visit <a href=\"http://www.example.com/\">www.example.com/</a> now.</p>",
+  },
+  {
+    section: "autolinks",
+    name: "url autolink with balanced parentheses",
+    markdown: "Visit https://en.wikipedia.org/wiki/C_(programming_language).",
+    html: "<p>Visit <a href=\"https://en.wikipedia.org/wiki/C_(programming_language)\">https://en.wikipedia.org/wiki/C_(programming_language)</a>.</p>",
+  },
+  // --- Edge cases: lists ---
+  {
+    section: "lists",
+    name: "ordered list starting at zero",
+    markdown: "0. zero\n1. one",
+    html: "<ol start=\"0\"><li>zero</li><li>one</li></ol>",
+  },
+  {
+    section: "lists",
+    name: "ordered list with letter marker is not a list",
+    markdown: "a. not a list\nb. not a list",
+    html: "<p>a. not a list\nb. not a list</p>",
+  },
+  {
+    section: "lists",
+    name: "triple nested unordered list",
+    markdown: "- one\n  - two\n    - three",
+    html: "<ul><li>one<ul><li>two<ul><li>three</li></ul></li></ul></li></ul>",
+  },
+  {
+    section: "lists",
+    name: "mixed markers at same indent create separate lists",
+    markdown: "- alpha\n* beta",
+    html: "<ul><li>alpha</li></ul><ul><li>beta</li></ul>",
+  },
+  {
+    section: "lists",
+    name: "list item containing only task checkbox",
+    markdown: "- [x]",
+    html: "<ul><li><input type=\"checkbox\" disabled=\"\" checked=\"\" /></li></ul>",
+  },
+  {
+    section: "lists",
+    name: "tight list with nested loose list",
+    markdown: "- outer\n  - inner\n\n    inner continuation",
+    html: "<ul><li>outer<ul><li><p>inner</p><p>inner continuation</p></li></ul></li></ul>",
+  },
+  // --- Edge cases: tables ---
+  {
+    section: "tables",
+    name: "table with header row only",
+    markdown: "| A | B |\n| - | - |",
+    html: "<table><thead><tr><th>A</th><th>B</th></tr></thead></table>",
+  },
+  {
+    section: "tables",
+    name: "table with trailing pipe on some rows only",
+    markdown: "| A | B |\n| - | - |\n| 1 | 2",
+    html: "<table><thead><tr><th>A</th><th>B</th></tr></thead><tbody><tr><td>1</td><td>2</td></tr></tbody></table>",
+  },
+  {
+    section: "tables",
+    name: "table row with fewer cells is padded",
+    markdown: "| A | B |\n| - | - |\n| 1 |",
+    html: "<table><thead><tr><th>A</th><th>B</th></tr></thead><tbody><tr><td>1</td><td></td></tr></tbody></table>",
+  },
+  // --- Edge cases: block quotes ---
+  {
+    section: "block quotes",
+    name: "block quote containing fenced code and list",
+    markdown: "> ```\n> code\n> ```\n>\n> - item",
+    html: "<blockquote><pre><code>code\n</code></pre><ul><li>item</li></ul></blockquote>",
+  },
+  {
+    section: "block quotes",
+    name: "block quote with only blank lines after marker",
+    markdown: "> \n> ",
+    html: "<blockquote></blockquote>",
+  },
+  {
+    section: "block quotes",
+    name: "triple nested block quote",
+    markdown: "> outer\n> > middle\n> > > inner",
+    html: "<blockquote><p>outer</p><blockquote><p>middle</p><blockquote><p>inner</p></blockquote></blockquote></blockquote>",
+  },
+  // --- Edge cases: code blocks ---
+  {
+    section: "code blocks",
+    name: "tilde fenced code block with info string",
+    markdown: "~~~ts\ncode\n~~~",
+    html: "<pre><code class=\"language-ts\">code\n</code></pre>",
+  },
+  {
+    section: "code blocks",
+    name: "fenced code opened by tilde not closed by backtick",
+    markdown: "~~~\ncode\n```",
+    html: "<pre><code>code\n```\n</code></pre>",
+  },
+  {
+    section: "code blocks",
+    name: "indented code with blank line between code lines",
+    markdown: "    line one\n\n    line two",
+    html: "<pre><code>line one\n\nline two\n</code></pre>",
+  },
+  // --- Edge cases: html ---
+  {
+    section: "html",
+    name: "self-closing br with slash and space",
+    markdown: "alpha<br />beta",
+    html: "<p>alpha<br />beta</p>",
+  },
+  {
+    section: "html",
+    name: "html span nested inside emphasis",
+    markdown: "*<span class=\"x\">text</span>*",
+    html: "<p><em><span class=\"x\">text</span></em></p>",
+  },
+  // --- Edge cases: complex documents ---
+  {
+    section: "complex documents",
+    name: "thematic break without blank line after paragraph",
+    markdown: "paragraph\n***",
+    html: "<p>paragraph</p><hr />",
+  },
+  {
+    section: "complex documents",
+    name: "setext heading with inline formatting",
+    markdown: "*em* and **strong**\n======",
+    html: "<h1><em>em</em> and <strong>strong</strong></h1>",
+  },
+  {
+    section: "complex documents",
+    name: "reference definitions separated by blank lines are still collected",
+    markdown: "[a]: https://a.com\n\n[b]: https://b.com\n\n[a][b]",
+    html: "<p><a href=\"https://b.com\">a</a></p>",
+  },
+  {
+    section: "complex documents",
+    name: "many consecutive code spans in one paragraph",
+    markdown: "`a` `b` `c` `d` `e`",
+    html: "<p><code>a</code> <code>b</code> <code>c</code> <code>d</code> <code>e</code></p>",
+  },
+  {
+    section: "complex documents",
+    name: "html comment with blank lines around it",
+    markdown: "alpha\n\n<!-- comment -->\n\nbeta",
+    html: "<p>alpha</p><p>beta</p>",
+  },
+  {
+    section: "complex documents",
+    name: "ordered list with mixed paren and dot delimiters",
+    markdown: "1. dot\n2) paren",
+    html: "<ol><li>dot</li></ol><ol start=\"2\"><li>paren</li></ol>",
+  },
+  // --- Edge cases: optimistic closing ---
+  {
+    section: "optimistic closing",
+    name: "unterminated formatting in table header auto-closes",
+    markdown: "| *A |\n| --- |\n| 1 |",
+    html: "<table><thead><tr><th><em>A</em></th></tr></thead><tbody><tr><td>1</td></tr></tbody></table>",
+  },
+  {
+    section: "optimistic closing",
+    name: "unterminated strikethrough containing code span auto-closes",
+    markdown: "~~del `code",
+    html: "<p><del>del <code>code</code></del></p>",
+  },
+  {
+    section: "optimistic closing",
+    name: "unterminated emphasis inside unterminated link auto-closes both",
+    markdown: "[*em](url",
+    html: "<p><a href=\"url\"><em>em</em></a></p>",
+  },
+  {
+    section: "optimistic closing",
+    name: "unterminated angle bracket autolink consumes rest of paragraph",
+    markdown: "<https://example.com rest",
+    html: "<p><a href=\"https://example.com rest\">https://example.com rest</a></p>",
+  },
+  {
+    section: "optimistic closing",
+    name: "unterminated emphasis after backslash escape stays literal",
+    markdown: "*em\\",
+    html: "<p><em>em</em>\\</p>",
+  },
+  {
+    section: "optimistic closing",
+    name: "unterminated code span with only backticks is literal backticks",
+    markdown: "``",
+    html: "<p>``</p>",
+  },
+  {
+    section: "optimistic closing",
+    name: "unterminated emphasis with entity reference auto-closes",
+    markdown: "*em &amp; tail",
+    html: "<p><em>em &amp; tail</em></p>",
+  },
 ];
 
 const enabledRenderingCases = new Set([
@@ -1943,6 +2244,63 @@ const enabledRenderingCases = new Set([
   "optimistic closing: unterminated gfm email autolink at end auto-closes",
   "optimistic closing: unterminated www autolink at end auto-closes",
   "optimistic closing: unterminated block quote with lazy continuation consumes both lines",
+  // Edge cases: escaping
+  "escaping: multiple consecutive backslashes",
+  "escaping: backslash at end of line is hard break",
+  "escaping: numeric entity at max code point",
+  "escaping: invalid numeric entity renders as replacement character",
+  // Edge cases: emphasis
+  "emphasis: four asterisks is literal",
+  "emphasis: asterisk emphasis followed by dash is literal",
+  "emphasis: emphasis right before hard break",
+  "emphasis: emphasis right before backslash hard break",
+  "emphasis: underscore emphasis with punctuation boundary opens",
+  "emphasis: four underscores is literal",
+  // Edge cases: code spans
+  "code spans: code span containing backtick via double backticks",
+  "code spans: triple backtick code span with double-backtick content",
+  // Edge cases: links
+  "links: reference link with internal whitespace in definition label",
+  "links: link with empty text and empty destination",
+  // Edge cases: images
+  "images: image with reference and title",
+  // Edge cases: autolinks
+  "autolinks: www autolink trailing slash is included",
+  "autolinks: url autolink with balanced parentheses",
+  // Edge cases: lists
+  "lists: ordered list starting at zero",
+  "lists: ordered list with letter marker is not a list",
+  "lists: triple nested unordered list",
+  "lists: mixed markers at same indent create separate lists",
+  "lists: list item containing only task checkbox",
+  "lists: tight list with nested loose list",
+  // Edge cases: tables
+  "tables: table with header row only",
+  "tables: table with trailing pipe on some rows only",
+  "tables: table row with fewer cells is padded",
+  // Edge cases: block quotes
+  "block quotes: block quote containing fenced code and list",
+  "block quotes: triple nested block quote",
+  // Edge cases: code blocks
+  "code blocks: tilde fenced code block with info string",
+  "code blocks: fenced code opened by tilde not closed by backtick",
+  "code blocks: indented code with blank line between code lines",
+  // Edge cases: html
+  "html: self-closing br with slash and space",
+  "html: html span nested inside emphasis",
+  // Edge cases: complex documents
+  "complex documents: thematic break without blank line after paragraph",
+  "complex documents: setext heading with inline formatting",
+  "complex documents: reference definitions separated by blank lines are still collected",
+  "complex documents: many consecutive code spans in one paragraph",
+  "complex documents: html comment with blank lines around it",
+  "complex documents: ordered list with mixed paren and dot delimiters",
+  // Edge cases: optimistic closing
+  "optimistic closing: unterminated formatting in table header auto-closes",
+  "optimistic closing: unterminated strikethrough containing code span auto-closes",
+  "optimistic closing: unterminated emphasis inside unterminated link auto-closes both",
+  "optimistic closing: unterminated angle bracket autolink consumes rest of paragraph",
+  "optimistic closing: unterminated emphasis with entity reference auto-closes",
 ]);
 
 describe("GetDown GFM rendering", () => {
