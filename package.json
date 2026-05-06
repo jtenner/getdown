@@ -1,0 +1,43 @@
+{
+  "name": "get-down",
+  "version": "0.0.0",
+  "module": "index.ts",
+  "devDependencies": {
+    "@types/bun": "latest",
+    "@types/react": "^19.2.14",
+    "@types/react-dom": "^19.2.3",
+    "react": "^19.2.6",
+    "react-dom": "^19.2.6",
+    "typescript": "^6.0.3"
+  },
+  "peerDependencies": {
+    "react": ">=18",
+    "react-dom": ">=18"
+  },
+  "exports": {
+    ".": {
+      "types": "./src/index.tsx",
+      "import": "./index.ts"
+    }
+  },
+  "description": "React component API shell for GitHub Flavored Markdown.",
+  "files": [
+    "src",
+    "index.ts",
+    "README.md",
+    "docs"
+  ],
+  "keywords": [
+    "markdown",
+    "gfm",
+    "react",
+    "typescript"
+  ],
+  "private": true,
+  "scripts": {
+    "test": "bun test",
+    "typecheck": "tsc --noEmit"
+  },
+  "type": "module",
+  "types": "src/index.tsx"
+}
