@@ -137,22 +137,6 @@ function parseInlineRange(
     }
 
     if (char === "<") {
-      const htmlBreak = parseHtmlBreakAt(source, index, end);
-      if (htmlBreak) {
-        flushText();
-        nodes.push({ kind: "break" });
-        index = htmlBreak.index;
-        continue;
-      }
-
-      const htmlSpan = parseHtmlSpanAt(source, index, end, references);
-      if (htmlSpan) {
-        flushText();
-        nodes.push(htmlSpan.node);
-        index = htmlSpan.index;
-        continue;
-      }
-
       const autolink = parseAngleAutolinkAt(source, index, end);
       if (autolink) {
         flushText();
@@ -308,29 +292,6 @@ function parseInlineRange(
 
   flushText();
   return { nodes, index, closed: false };
-}
-
-function parseHtmlBreakAt(source: string, index: number, end: number): { index: number } | null {
-  const match = /^<br\s*\/?\s*>/i.exec(source.slice(index, end));
-  return match ? { index: index + match[0].length } : null;
-}
-
-function parseHtmlSpanAt(
-  source: string,
-  index: number,
-  end: number,
-  references?: LinkReferenceMap,
-): { node: InlineNode; index: number } | null {
-  const match = /^<span(?:\s+class="([^"]*)")?>([\s\S]*?)<\/span>/.exec(source.slice(index, end));
-  if (!match) return null;
-  return {
-    node: {
-      kind: "htmlSpan",
-      ...(match[1] !== undefined ? { className: match[1] } : null),
-      children: parseInlines(match[2]!, references),
-    },
-    index: index + match[0].length,
-  };
 }
 
 interface ParsedAutolink {
@@ -606,7 +567,6 @@ function plainText(nodes: readonly InlineNode[]): string {
       case "strong":
       case "delete":
       case "link":
-      case "htmlSpan":
         text += plainText(node.children);
         break;
       case "image":

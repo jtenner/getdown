@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import { renderToStaticMarkup } from "react-dom/server";
-import { GetDown } from "./index";
+import { GetDown, type GetDownBoldProps, type GetDownCodeBlockProps, type GetDownInlineCodeProps, type GetDownLinkProps, type GetDownTableCellProps, type GetDownTableProps } from "./index";
 
 interface GfmRenderingCase {
   section: string;
@@ -11,6 +11,10 @@ interface GfmRenderingCase {
 
 function render(markdown: string): string {
   return normalizeStaticMarkup(renderToStaticMarkup(<GetDown content={markdown} />));
+}
+
+function renderWithProps(props: Parameters<typeof GetDown>[0]): string {
+  return normalizeStaticMarkup(renderToStaticMarkup(<GetDown {...props} />));
 }
 
 function normalizeStaticMarkup(html: string): string {
@@ -624,9 +628,9 @@ export const gfmRenderingCases: GfmRenderingCase[] = [
   },
   {
     section: "images",
-    name: "image with empty src",
+    name: "image with empty src is rendered without src",
     markdown: "![alt]()",
-    html: "<p><img src=\"\" alt=\"alt\" /></p>",
+    html: "<p><img alt=\"alt\" /></p>",
   },
   {
     section: "images",
@@ -1008,57 +1012,57 @@ export const gfmRenderingCases: GfmRenderingCase[] = [
   },
   {
     section: "html",
-    name: "inline html is preserved",
+    name: "inline html is escaped",
     markdown: "Hello <span>world</span>.",
-    html: "<p>Hello <span>world</span>.</p>",
+    html: "<p>Hello &lt;span&gt;world&lt;/span&gt;.</p>",
   },
   {
     section: "html",
-    name: "html block is preserved",
+    name: "html block is escaped as paragraph text",
     markdown: "<div>\n  <strong>Hello</strong>\n</div>",
-    html: "<div>\n  <strong>Hello</strong>\n</div>",
+    html: "<p>&lt;div&gt;\n&lt;strong&gt;Hello&lt;/strong&gt;\n&lt;/div&gt;</p>",
   },
   {
     section: "html",
-    name: "markdown is not parsed inside html block",
-    markdown: "<div>\n**not strong**\n</div>",
-    html: "<div>\n**not strong**\n</div>",
+    name: "markdown is parsed normally around escaped html text",
+    markdown: "<div>\n**strong text**\n</div>",
+    html: "<p>&lt;div&gt;\n<strong>strong text</strong>\n&lt;/div&gt;</p>",
   },
   {
     section: "html",
-    name: "html comment",
+    name: "html comment is escaped",
     markdown: "<!-- comment -->\n\nalpha",
-    html: "<p>alpha</p>",
+    html: "<p>&lt;!-- comment --&gt;</p><p>alpha</p>",
   },
   {
     section: "html",
-    name: "self-closing html inline",
+    name: "self-closing html inline is escaped",
     markdown: "alpha<br />beta",
-    html: "<p>alpha<br />beta</p>",
+    html: "<p>alpha&lt;br /&gt;beta</p>",
   },
   {
     section: "html",
-    name: "inline html with attributes",
+    name: "inline html with attributes is escaped",
     markdown: "alpha <span class=\"highlight\">beta</span> gamma",
-    html: "<p>alpha <span class=\"highlight\">beta</span> gamma</p>",
+    html: "<p>alpha &lt;span class=&quot;highlight&quot;&gt;beta&lt;/span&gt; gamma</p>",
   },
   {
     section: "html",
-    name: "html block type 6 starts and ends with blank lines",
+    name: "html block text is escaped between paragraphs",
     markdown: "alpha\n\n<div>\n  beta\n</div>\n\ngamma",
-    html: "<p>alpha</p><div>\n  beta\n</div>\n<p>gamma</p>",
+    html: "<p>alpha</p><p>&lt;div&gt;\nbeta\n&lt;/div&gt;</p><p>gamma</p>",
   },
   {
     section: "html",
-    name: "inline html inside emphasis",
+    name: "inline html inside emphasis is escaped",
     markdown: "*alpha <span>beta</span> gamma*",
-    html: "<p><em>alpha <span>beta</span> gamma</em></p>",
+    html: "<p><em>alpha &lt;span&gt;beta&lt;/span&gt; gamma</em></p>",
   },
   {
     section: "html",
-    name: "raw void element",
+    name: "raw void element is escaped as paragraph text",
     markdown: "<hr>",
-    html: "<hr />",
+    html: "<p>&lt;hr&gt;</p>",
   },
   {
     section: "tables",
@@ -1877,15 +1881,15 @@ export const gfmRenderingCases: GfmRenderingCase[] = [
   // --- Edge cases: html ---
   {
     section: "html",
-    name: "self-closing br with slash and space",
+    name: "self-closing br with slash and space is escaped",
     markdown: "alpha<br />beta",
-    html: "<p>alpha<br />beta</p>",
+    html: "<p>alpha&lt;br /&gt;beta</p>",
   },
   {
     section: "html",
-    name: "html span nested inside emphasis",
+    name: "html span nested inside emphasis is escaped",
     markdown: "*<span class=\"x\">text</span>*",
-    html: "<p><em><span class=\"x\">text</span></em></p>",
+    html: "<p><em>&lt;span class=&quot;x&quot;&gt;text&lt;/span&gt;</em></p>",
   },
   // --- Edge cases: complex documents ---
   {
@@ -1914,9 +1918,9 @@ export const gfmRenderingCases: GfmRenderingCase[] = [
   },
   {
     section: "complex documents",
-    name: "html comment with blank lines around it",
+    name: "html comment with blank lines around it is escaped",
     markdown: "alpha\n\n<!-- comment -->\n\nbeta",
-    html: "<p>alpha</p><p>beta</p>",
+    html: "<p>alpha</p><p>&lt;!-- comment --&gt;</p><p>beta</p>",
   },
   {
     section: "complex documents",
@@ -2070,7 +2074,7 @@ const enabledRenderingCases = new Set([
   "images: reference image",
   "images: shortcut reference image",
   "images: image with empty alt text",
-  "images: image with empty src",
+  "images: image with empty src is rendered without src",
   "images: image inside link",
   "images: image alt text contains characters that need escaping",
   "autolinks: angle bracket autolink",
@@ -2134,15 +2138,15 @@ const enabledRenderingCases = new Set([
   "code blocks: fenced code block with blank line at start",
   "code blocks: indented code block preserves indentation",
   "code blocks: fenced code block with trailing spaces in info string",
-  "html: inline html is preserved",
-  "html: html block is preserved",
-  "html: markdown is not parsed inside html block",
-  "html: html comment",
-  "html: self-closing html inline",
-  "html: inline html with attributes",
-  "html: html block type 6 starts and ends with blank lines",
-  "html: inline html inside emphasis",
-  "html: raw void element",
+  "html: inline html is escaped",
+  "html: html block is escaped as paragraph text",
+  "html: markdown is parsed normally around escaped html text",
+  "html: html comment is escaped",
+  "html: self-closing html inline is escaped",
+  "html: inline html with attributes is escaped",
+  "html: html block text is escaped between paragraphs",
+  "html: inline html inside emphasis is escaped",
+  "html: raw void element is escaped as paragraph text",
   "optimistic closing: unterminated fenced code block consumes rest of document",
   "optimistic closing: unterminated indented code block consumes rest of document",
   "definitions: link definition is not rendered",
@@ -2288,14 +2292,14 @@ const enabledRenderingCases = new Set([
   "code blocks: fenced code opened by tilde not closed by backtick",
   "code blocks: indented code with blank line between code lines",
   // Edge cases: html
-  "html: self-closing br with slash and space",
-  "html: html span nested inside emphasis",
+  "html: self-closing br with slash and space is escaped",
+  "html: html span nested inside emphasis is escaped",
   // Edge cases: complex documents
   "complex documents: thematic break without blank line after paragraph",
   "complex documents: setext heading with inline formatting",
   "complex documents: reference definitions separated by blank lines are still collected",
   "complex documents: many consecutive code spans in one paragraph",
-  "complex documents: html comment with blank lines around it",
+  "complex documents: html comment with blank lines around it is escaped",
   "complex documents: ordered list with mixed paren and dot delimiters",
   // Edge cases: optimistic closing
   "optimistic closing: unterminated formatting in table header auto-closes",
@@ -2315,4 +2319,65 @@ describe("GetDown GFM rendering", () => {
       expect(render(renderingCase.markdown)).toBe(renderingCase.html);
     });
   }
+});
+
+describe("GetDown renderer overrides", () => {
+  test("allows link and bold components to be replaced", () => {
+    function AppLink({ href, title, children }: GetDownLinkProps) {
+      return <a className="app-link" href={href} title={title} target="_blank" rel="noopener noreferrer">{children}</a>;
+    }
+
+    function AppBold({ children }: GetDownBoldProps) {
+      return <b className="app-bold">{children}</b>;
+    }
+
+    expect(renderWithProps({ content: "**Read** [docs](https://example.com)", onLinkComponent: AppLink, onBoldComponent: AppBold })).toBe(
+      "<p><b class=\"app-bold\">Read</b> <a class=\"app-link\" href=\"https://example.com\" target=\"_blank\" rel=\"noopener noreferrer\">docs</a></p>",
+    );
+  });
+
+  test("allows inline code to be replaced", () => {
+    function InlineCode({ value }: GetDownInlineCodeProps) {
+      return <code className="app-inline-code" data-code={value}>{value}</code>;
+    }
+
+    expect(renderWithProps({ content: "Use `getdown`.", onInlineCodeComponent: InlineCode })).toBe(
+      "<p>Use <code class=\"app-inline-code\" data-code=\"getdown\">getdown</code>.</p>",
+    );
+  });
+
+  test("allows code blocks and table pieces to be replaced", () => {
+    function CodeBlock({ code, language }: GetDownCodeBlockProps) {
+      return <pre className="app-code" data-language={language}><code>{code}</code></pre>;
+    }
+
+    function Table({ children }: GetDownTableProps) {
+      return <table className="app-table">{children}</table>;
+    }
+
+    function TableCell({ align, children }: GetDownTableCellProps) {
+      return <td className="app-cell" data-align={align}>{children}</td>;
+    }
+
+    expect(renderWithProps({
+      content: "```ts\nconst x = 1;\n```\n\n| A | B |\n| - | -: |\n| 1 | 2 |",
+      onCodeBlockComponent: CodeBlock,
+      onTableComponent: Table,
+      onTableCellComponent: TableCell,
+    })).toBe(
+      "<pre class=\"app-code\" data-language=\"ts\"><code>const x = 1;\n</code></pre><table class=\"app-table\"><thead><tr><th>A</th><th align=\"right\">B</th></tr></thead><tbody><tr><td class=\"app-cell\">1</td><td class=\"app-cell\" data-align=\"right\">2</td></tr></tbody></table>",
+    );
+  });
+
+  test("filters unsafe link and image urls by default", () => {
+    expect(render("[x](javascript:alert) ![alt](data:text/html,x)")).toBe("<p><a>x</a> <img alt=\"alt\" /></p>");
+  });
+
+  test("allows app-specific url sanitizers", () => {
+    expect(renderWithProps({
+      content: "[x](app://thread/1) ![alt](cid:image-1)",
+      onSanitizeLinkHref: (href) => href.startsWith("app://") ? href : undefined,
+      onSanitizeImageSrc: (src) => src.startsWith("cid:") ? src : undefined,
+    })).toBe("<p><a href=\"app://thread/1\">x</a> <img src=\"cid:image-1\" alt=\"alt\" /></p>");
+  });
 });

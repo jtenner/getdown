@@ -10,8 +10,7 @@ export type MarkdownBlockNode =
   | CodeBlock
   | TableBlock
   | ListBlock
-  | BlockQuoteBlock
-  | HtmlBlock;
+  | BlockQuoteBlock;
 
 interface BaseBlock {
   readonly id: string;
@@ -78,13 +77,6 @@ export interface BlockQuoteBlock extends Omit<BaseBlock, "kind"> {
   readonly blocks: readonly MarkdownBlockNode[];
 }
 
-export interface HtmlBlock extends Omit<BaseBlock, "kind"> {
-  readonly kind: "html";
-  readonly tag: "div" | "hr";
-  readonly innerHtml: string;
-  readonly trailingNewline?: boolean;
-}
-
 export type InlineNode =
   | TextNode
   | BreakNode
@@ -93,8 +85,7 @@ export type InlineNode =
   | DeleteNode
   | CodeSpanNode
   | LinkNode
-  | ImageNode
-  | HtmlSpanNode;
+  | ImageNode;
 
 export interface TextNode {
   readonly kind: "text";
@@ -137,10 +128,4 @@ export interface ImageNode {
   readonly src: string;
   readonly alt: string;
   readonly title?: string;
-}
-
-export interface HtmlSpanNode {
-  readonly kind: "htmlSpan";
-  readonly className?: string;
-  readonly children: readonly InlineNode[];
 }

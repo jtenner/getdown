@@ -6,6 +6,20 @@ The public API is:
 <GetDown content={markdown} />
 ```
 
+Rendering can be customized at render time with per-node component props:
+
+```tsx
+<GetDown
+  content={markdown}
+  onLinkComponent={AppLink}
+  onBoldComponent={AppBold}
+  onCodeBlockComponent={AppCodeBlock}
+  onTableComponent={AppTable}
+/>
+```
+
+The parser does not execute or inject raw HTML. HTML-looking input is rendered as escaped text by default, which keeps the package appropriate for chat interfaces.
+
 Internally, getdown is split into a pure parser core and a thin React renderer:
 
 ```txt
@@ -15,7 +29,7 @@ src/
     document.ts  # block parser + structural sharing between document versions
     inlines.ts   # inline parsing for text, escapes, entities, emphasis, breaks
   react/
-    GetDown.tsx  # public component + memoized block rendering
+    GetDown.tsx  # public component + memoized block rendering + renderer overrides
 ```
 
 The performance invariant is that unchanged parsed blocks are reused by object

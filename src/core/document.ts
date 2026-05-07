@@ -2,7 +2,6 @@ import type {
   BlockQuoteBlock,
   CodeBlock,
   HeadingBlock,
-  HtmlBlock,
   ListBlock,
   MarkdownBlockNode,
   ParagraphBlock,
@@ -47,15 +46,8 @@ export function parseDocument(content: string, previous?: ParsedDocument | null)
       continue;
     }
 
-    if ((mayHaveReferenceDefinitions && parseLinkReferenceDefinitionLine(line.text)) || isHtmlCommentLine(line.text)) {
+    if (mayHaveReferenceDefinitions && parseLinkReferenceDefinitionLine(line.text)) {
       lineIndex += 1;
-      continue;
-    }
-
-    const htmlBlock = parseHtmlBlock(lines, lineIndex, reuse);
-    if (htmlBlock) {
-      blocks.push(htmlBlock.block);
-      lineIndex = htmlBlock.nextLine;
       continue;
     }
 
@@ -119,62 +111,6 @@ export function parseDocument(content: string, previous?: ParsedDocument | null)
   }
 
   return { content: normalized, blocks };
-}
-
-function parseHtmlBlock(
-  lines: readonly SourceLine[],
-  startLine: number,
-  reuse: ReuseIndex | null,
-): { block: HtmlBlock; nextLine: number } | null {
-  const first = stripUpToThreeSpaces(lines[startLine]!.text);
-  if (/^<hr\s*\/?>$/i.test(first.trim())) {
-    const raw = lines[startLine]!.text;
-    const block: HtmlBlock = {
-      id: blockId("html", lines[startLine]!.start, raw),
-      kind: "html",
-      raw,
-      start: lines[startLine]!.start,
-      end: lines[startLine]!.end,
-      tag: "hr",
-      innerHtml: "",
-    };
-    return { block: reuseBlock(block, reuse), nextLine: startLine + 1 };
-  }
-
-  if (first.trim() !== "<div>") return null;
-
-  const inner: string[] = [];
-  let nextLine = startLine + 1;
-  let end = lines[startLine]!.end;
-
-  while (nextLine < lines.length) {
-    const line = lines[nextLine]!;
-    if (stripUpToThreeSpaces(line.text).trim() === "</div>") {
-      end = line.end;
-      nextLine += 1;
-      const sequential = consumeSequentialReusableBlockFromLines<HtmlBlock>("html", lines[startLine]!.start, lines, startLine, nextLine, reuse);
-      if (sequential) return { block: sequential, nextLine };
-      const raw = sourceSlice(lines, startLine, nextLine);
-      const reusable = consumeReusableBlock<HtmlBlock>("html", lines[startLine]!.start, raw, reuse);
-      if (reusable) return { block: reusable, nextLine };
-      const block: HtmlBlock = {
-        id: blockId("html", lines[startLine]!.start, raw),
-        kind: "html",
-        raw,
-        start: lines[startLine]!.start,
-        end,
-        tag: "div",
-        innerHtml: inner.length === 0 ? "" : `\n${inner.join("\n")}\n`,
-        ...(lines[nextLine] && isBlank(lines[nextLine]!.text) ? { trailingNewline: true } : null),
-      };
-      return { block: reuseBlock(block, reuse), nextLine };
-    }
-    inner.push(line.text);
-    end = line.end;
-    nextLine += 1;
-  }
-
-  return null;
 }
 
 function parseBlockQuote(
@@ -962,14 +898,6 @@ function isBlank(line: string): boolean {
     if (char !== " " && char !== "\t") return false;
   }
   return true;
-}
-
-function isHtmlCommentLine(line: string): boolean {
-  const start = skipUpToThreeSpacesIndex(line);
-  if (!line.startsWith("<!--", start)) return false;
-  let end = line.length;
-  while (end > start && (line[end - 1] === " " || line[end - 1] === "\t")) end -= 1;
-  return end >= start + 7 && line.slice(end - 3, end) === "-->";
 }
 
 function isIndentedCodeLine(line: string): boolean {

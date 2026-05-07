@@ -1,18 +1,30 @@
 # getdown
 
-A React component API shell for rendering GitHub Flavored Markdown.
+A chat-safe React component API for rendering GitHub Flavored Markdown.
 
 ## API
 
 ```tsx
-import { GetDown } from "getdown";
+import { GetDown, type GetDownLinkProps } from "getdown";
+
+function AppLink({ href, title, children }: GetDownLinkProps) {
+  return (
+    <a className="app-link" href={href} title={title} target="_blank" rel="noopener noreferrer">
+      {children}
+    </a>
+  );
+}
 
 export function MarkdownView({ markdown }: { markdown: string }) {
-  return <GetDown content={markdown} />;
+  return <GetDown content={markdown} onLinkComponent={AppLink} />;
 }
 ```
 
 `content` is the complete GitHub Flavored Markdown string for the current render.
+
+Renderer output can be customized with per-node component props such as `onLinkComponent`, `onBoldComponent`, `onInlineCodeComponent`, `onCodeBlockComponent`, `onTableComponent`, and `onTableCellComponent`.
+
+Raw HTML is not injected. HTML-like markdown is rendered as escaped text by default, and link/image URLs are filtered with safe defaults. Use `onSanitizeLinkHref` and `onSanitizeImageSrc` to provide app-specific URL policy.
 
 ## Development
 
