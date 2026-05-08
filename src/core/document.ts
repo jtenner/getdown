@@ -21,7 +21,7 @@ interface SourceLine {
 interface ReuseIndex {
   readonly blocks: readonly MarkdownBlockNode[];
   cursor: number;
-  byFingerprint?: Map<string, MarkdownBlockNode[]>;
+  byFingerprint?: Map<string, MarkdownBlockNode[]> | undefined;
 }
 
 type LinkReferenceDefinitions = ReadonlyMap<string, LinkReferenceDefinition>;
@@ -313,15 +313,15 @@ interface ParsedListMarker {
   readonly indent: number;
   readonly ordered: boolean;
   readonly marker: string;
-  readonly number?: number;
+  readonly number?: number | undefined;
   readonly text: string;
 }
 
 interface MutableListItem {
   text: string;
   children: readonly import("./ast").InlineNode[];
-  task?: "checked" | "unchecked";
-  blocks?: MarkdownBlockNode[];
+  task?: "checked" | "unchecked" | undefined;
+  blocks?: MarkdownBlockNode[] | undefined;
 }
 
 function parseList(

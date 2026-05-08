@@ -2,7 +2,7 @@ import type { InlineNode } from "./ast";
 
 export interface LinkReferenceDefinition {
   readonly href: string;
-  readonly title?: string;
+  readonly title?: string | undefined;
 }
 
 export type LinkReferenceMap = ReadonlyMap<string, LinkReferenceDefinition>;
@@ -413,7 +413,7 @@ function parseInlineImageAt(
   index: number,
   end: number,
   references?: LinkReferenceMap,
-): { label: string; href: string; title?: string; index: number } | null {
+): { label: string; href: string; title?: string | undefined; index: number } | null {
   return parseLinkLikeAt(source, index + 1, end, references);
 }
 
@@ -422,7 +422,7 @@ function parseInlineLinkAt(
   index: number,
   end: number,
   references?: LinkReferenceMap,
-): { label: string; href: string; title?: string; index: number } | null {
+): { label: string; href: string; title?: string | undefined; index: number } | null {
   return parseLinkLikeAt(source, index, end, references);
 }
 
@@ -431,7 +431,7 @@ function parseLinkLikeAt(
   bracketIndex: number,
   end: number,
   references?: LinkReferenceMap,
-): { label: string; href: string; title?: string; index: number } | null {
+): { label: string; href: string; title?: string | undefined; index: number } | null {
   const labelEnd = findClosingBracket(source, bracketIndex, end);
   if (labelEnd === -1) return null;
 
@@ -459,7 +459,7 @@ function parseReferenceLink(
   end: number,
   label: string,
   references?: LinkReferenceMap,
-): { label: string; href: string; title?: string; index: number } | null {
+): { label: string; href: string; title?: string | undefined; index: number } | null {
   if (!references) return null;
 
   if (source[labelEnd + 1] === "[") {
@@ -496,7 +496,7 @@ function parseLinkDestination(
   source: string,
   index: number,
   end: number,
-): { href: string; title?: string; index: number } | null {
+): { href: string; title?: string | undefined; index: number } | null {
   let cursor = index;
   let quote: '"' | "'" | null = null;
 
@@ -521,7 +521,7 @@ function parseLinkDestination(
   return parsed ? { ...parsed, index: end } : null;
 }
 
-function parseLinkBody(body: string): { href: string; title?: string } | null {
+function parseLinkBody(body: string): { href: string; title?: string | undefined } | null {
   const trimmed = body.trim();
   if (trimmed === "") return { href: "" };
   if (trimmed.startsWith("<")) {

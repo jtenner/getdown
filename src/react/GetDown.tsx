@@ -55,7 +55,7 @@ export interface GetDownThematicBreakProps {
 export interface GetDownCodeBlockProps {
   readonly node: CodeBlock;
   readonly code: string;
-  readonly language?: string;
+  readonly language?: string | undefined;
 }
 
 export interface GetDownBlockquoteProps {
@@ -66,14 +66,14 @@ export interface GetDownBlockquoteProps {
 export interface GetDownListProps {
   readonly node: ListBlock;
   readonly ordered: boolean;
-  readonly start?: number;
+  readonly start?: number | undefined;
   readonly children: ReactNode;
 }
 
 export interface GetDownListItemProps {
   readonly node: ListItem;
   readonly index: number;
-  readonly task?: "checked" | "unchecked";
+  readonly task?: "checked" | "unchecked" | undefined;
   readonly children: ReactNode;
 }
 
@@ -108,7 +108,7 @@ export interface GetDownTableHeaderCellProps {
   readonly node: TableCell;
   readonly table: TableBlock;
   readonly columnIndex: number;
-  readonly align?: "left" | "center" | "right";
+  readonly align?: "left" | "center" | "right" | undefined;
   readonly children: ReactNode;
 }
 
@@ -117,7 +117,7 @@ export interface GetDownTableCellProps {
   readonly table: TableBlock;
   readonly rowIndex: number;
   readonly columnIndex: number;
-  readonly align?: "left" | "center" | "right";
+  readonly align?: "left" | "center" | "right" | undefined;
   readonly children: ReactNode;
 }
 
@@ -152,16 +152,16 @@ export interface GetDownInlineCodeProps {
 
 export interface GetDownLinkProps {
   readonly node: LinkNode;
-  readonly href?: string;
-  readonly title?: string;
+  readonly href?: string | undefined;
+  readonly title?: string | undefined;
   readonly children: ReactNode;
 }
 
 export interface GetDownImageProps {
   readonly node: ImageNode;
-  readonly src?: string;
+  readonly src?: string | undefined;
   readonly alt: string;
-  readonly title?: string;
+  readonly title?: string | undefined;
 }
 
 export interface GetDownRendererComponents {

@@ -40,7 +40,7 @@ export interface ThematicBreakBlock extends Omit<BaseBlock, "kind"> {
 export interface CodeBlock extends Omit<BaseBlock, "kind"> {
   readonly kind: "code";
   readonly text: string;
-  readonly language?: string;
+  readonly language?: string | undefined;
 }
 
 export interface TableBlock extends Omit<BaseBlock, "kind"> {
@@ -61,15 +61,15 @@ export interface ListBlock extends Omit<BaseBlock, "kind"> {
   readonly kind: "list";
   readonly ordered: boolean;
   readonly marker: string;
-  readonly startNumber?: number;
+  readonly startNumber?: number | undefined;
   readonly items: readonly ListItem[];
 }
 
 export interface ListItem {
   readonly text: string;
   readonly children: readonly InlineNode[];
-  readonly task?: "checked" | "unchecked";
-  readonly blocks?: readonly MarkdownBlockNode[];
+  readonly task?: "checked" | "unchecked" | undefined;
+  readonly blocks?: readonly MarkdownBlockNode[] | undefined;
 }
 
 export interface BlockQuoteBlock extends Omit<BaseBlock, "kind"> {
@@ -119,7 +119,7 @@ export interface CodeSpanNode {
 export interface LinkNode {
   readonly kind: "link";
   readonly href: string;
-  readonly title?: string;
+  readonly title?: string | undefined;
   readonly children: readonly InlineNode[];
 }
 
@@ -127,5 +127,5 @@ export interface ImageNode {
   readonly kind: "image";
   readonly src: string;
   readonly alt: string;
-  readonly title?: string;
+  readonly title?: string | undefined;
 }
