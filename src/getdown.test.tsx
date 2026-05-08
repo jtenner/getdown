@@ -718,6 +718,12 @@ export const gfmRenderingCases: GfmRenderingCase[] = [
   },
   {
     section: "lists",
+    name: "unordered list interrupts paragraph after label",
+    markdown: "list:\n- item\n- item\n- item",
+    html: "<p>list:</p><ul><li>item</li><li>item</li><li>item</li></ul>",
+  },
+  {
+    section: "lists",
     name: "ordered list preserves start number",
     markdown: "3. three\n4. four",
     html: "<ol start=\"3\"><li>three</li><li>four</li></ol>",
@@ -2089,6 +2095,7 @@ const enabledRenderingCases = new Set([
   "autolinks: email autolink followed by period",
   "lists: unordered list with hyphens",
   "lists: unordered list with asterisks",
+  "lists: unordered list interrupts paragraph after label",
   "lists: ordered list preserves start number",
   "lists: ordered list with right paren delimiter",
   "lists: nested unordered list",

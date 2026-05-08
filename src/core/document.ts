@@ -537,6 +537,13 @@ function isSameListLevel(marker: ParsedListMarker, firstMarker: ParsedListMarker
   return marker.indent >= firstMarker.indent && marker.indent <= firstMarker.indent + 1;
 }
 
+function isParagraphInterruptingListLine(line: string): boolean {
+  const marker = parseListMarker(line);
+  if (!marker) return false;
+  if (marker.text.trim().length === 0) return false;
+  return !marker.ordered || marker.number === 1;
+}
+
 function parseListMarker(line: string): ParsedListMarker | null {
   const unordered = /^( *)([-+*])(?:[ \t]+(.*)|[ \t]*)$/.exec(line);
   if (unordered) {
@@ -777,6 +784,7 @@ function parseParagraph(
         isAtxHeadingLine(line.text) ||
         isThematicBreakLine(line.text) ||
         isBlockQuoteLine(line.text) ||
+        isParagraphInterruptingListLine(line.text) ||
         isIndentedCodeLine(line.text))
     ) {
       break;
