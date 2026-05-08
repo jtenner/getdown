@@ -35,6 +35,8 @@ import { parseDocument } from "../core/document";
 
 export type GetDownComponent<Props> = ComponentType<Props>;
 
+type GetDownOptionalValue<T> = T | null | undefined;
+
 export interface GetDownParagraphProps {
   readonly node: ParagraphBlock;
   readonly children: ReactNode;
@@ -163,40 +165,40 @@ export interface GetDownImageProps {
 }
 
 export interface GetDownRendererComponents {
-  readonly onParagraphComponent?: GetDownComponent<GetDownParagraphProps>;
-  readonly onHeadingComponent?: GetDownComponent<GetDownHeadingProps>;
-  readonly onThematicBreakComponent?: GetDownComponent<GetDownThematicBreakProps>;
-  readonly onCodeBlockComponent?: GetDownComponent<GetDownCodeBlockProps>;
-  readonly onBlockquoteComponent?: GetDownComponent<GetDownBlockquoteProps>;
-  readonly onListComponent?: GetDownComponent<GetDownListProps>;
-  readonly onListItemComponent?: GetDownComponent<GetDownListItemProps>;
-  readonly onTaskCheckboxComponent?: GetDownComponent<GetDownTaskCheckboxProps>;
-  readonly onTableComponent?: GetDownComponent<GetDownTableProps>;
-  readonly onTableHeadComponent?: GetDownComponent<GetDownTableHeadProps>;
-  readonly onTableBodyComponent?: GetDownComponent<GetDownTableBodyProps>;
-  readonly onTableRowComponent?: GetDownComponent<GetDownTableRowProps>;
-  readonly onTableHeaderCellComponent?: GetDownComponent<GetDownTableHeaderCellProps>;
-  readonly onTableCellComponent?: GetDownComponent<GetDownTableCellProps>;
-  readonly onTextComponent?: GetDownComponent<GetDownTextProps>;
-  readonly onBreakComponent?: GetDownComponent<GetDownBreakProps>;
-  readonly onEmphasisComponent?: GetDownComponent<GetDownEmphasisProps>;
-  readonly onItalicComponent?: GetDownComponent<GetDownEmphasisProps>;
-  readonly onBoldComponent?: GetDownComponent<GetDownBoldProps>;
-  readonly onStrongComponent?: GetDownComponent<GetDownBoldProps>;
-  readonly onDeleteComponent?: GetDownComponent<GetDownDeleteProps>;
-  readonly onStrikethroughComponent?: GetDownComponent<GetDownDeleteProps>;
-  readonly onInlineCodeComponent?: GetDownComponent<GetDownInlineCodeProps>;
-  readonly onLinkComponent?: GetDownComponent<GetDownLinkProps>;
-  readonly onImageComponent?: GetDownComponent<GetDownImageProps>;
+  readonly onParagraphComponent?: GetDownOptionalValue<GetDownComponent<GetDownParagraphProps>>;
+  readonly onHeadingComponent?: GetDownOptionalValue<GetDownComponent<GetDownHeadingProps>>;
+  readonly onThematicBreakComponent?: GetDownOptionalValue<GetDownComponent<GetDownThematicBreakProps>>;
+  readonly onCodeBlockComponent?: GetDownOptionalValue<GetDownComponent<GetDownCodeBlockProps>>;
+  readonly onBlockquoteComponent?: GetDownOptionalValue<GetDownComponent<GetDownBlockquoteProps>>;
+  readonly onListComponent?: GetDownOptionalValue<GetDownComponent<GetDownListProps>>;
+  readonly onListItemComponent?: GetDownOptionalValue<GetDownComponent<GetDownListItemProps>>;
+  readonly onTaskCheckboxComponent?: GetDownOptionalValue<GetDownComponent<GetDownTaskCheckboxProps>>;
+  readonly onTableComponent?: GetDownOptionalValue<GetDownComponent<GetDownTableProps>>;
+  readonly onTableHeadComponent?: GetDownOptionalValue<GetDownComponent<GetDownTableHeadProps>>;
+  readonly onTableBodyComponent?: GetDownOptionalValue<GetDownComponent<GetDownTableBodyProps>>;
+  readonly onTableRowComponent?: GetDownOptionalValue<GetDownComponent<GetDownTableRowProps>>;
+  readonly onTableHeaderCellComponent?: GetDownOptionalValue<GetDownComponent<GetDownTableHeaderCellProps>>;
+  readonly onTableCellComponent?: GetDownOptionalValue<GetDownComponent<GetDownTableCellProps>>;
+  readonly onTextComponent?: GetDownOptionalValue<GetDownComponent<GetDownTextProps>>;
+  readonly onBreakComponent?: GetDownOptionalValue<GetDownComponent<GetDownBreakProps>>;
+  readonly onEmphasisComponent?: GetDownOptionalValue<GetDownComponent<GetDownEmphasisProps>>;
+  readonly onItalicComponent?: GetDownOptionalValue<GetDownComponent<GetDownEmphasisProps>>;
+  readonly onBoldComponent?: GetDownOptionalValue<GetDownComponent<GetDownBoldProps>>;
+  readonly onStrongComponent?: GetDownOptionalValue<GetDownComponent<GetDownBoldProps>>;
+  readonly onDeleteComponent?: GetDownOptionalValue<GetDownComponent<GetDownDeleteProps>>;
+  readonly onStrikethroughComponent?: GetDownOptionalValue<GetDownComponent<GetDownDeleteProps>>;
+  readonly onInlineCodeComponent?: GetDownOptionalValue<GetDownComponent<GetDownInlineCodeProps>>;
+  readonly onLinkComponent?: GetDownOptionalValue<GetDownComponent<GetDownLinkProps>>;
+  readonly onImageComponent?: GetDownOptionalValue<GetDownComponent<GetDownImageProps>>;
 }
 
 export interface GetDownProps extends GetDownRendererComponents {
   /** GitHub Flavored Markdown source to render. */
   readonly content: string;
   /** Return undefined to remove href from a rendered link. */
-  readonly onSanitizeLinkHref?: (href: string, node: LinkNode) => string | undefined;
+  readonly onSanitizeLinkHref?: GetDownOptionalValue<(href: string, node: LinkNode) => string | undefined>;
   /** Return undefined to remove src from a rendered image. */
-  readonly onSanitizeImageSrc?: (src: string, node: ImageNode) => string | undefined;
+  readonly onSanitizeImageSrc?: GetDownOptionalValue<(src: string, node: ImageNode) => string | undefined>;
 }
 
 interface RendererContextValue extends GetDownRendererComponents {

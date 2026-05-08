@@ -2376,6 +2376,16 @@ describe("GetDown renderer overrides", () => {
     );
   });
 
+  test("treats null renderer and sanitizer props as omitted", () => {
+    expect(renderWithProps({
+      content: "**Read** [docs](https://example.com)",
+      onBoldComponent: null,
+      onLinkComponent: null,
+      onSanitizeLinkHref: null,
+      onSanitizeImageSrc: undefined,
+    })).toBe("<p><strong>Read</strong> <a href=\"https://example.com\">docs</a></p>");
+  });
+
   test("filters unsafe link and image urls by default", () => {
     expect(render("[x](javascript:alert) ![alt](data:text/html,x)")).toBe("<p><a>x</a> <img alt=\"alt\" /></p>");
   });
